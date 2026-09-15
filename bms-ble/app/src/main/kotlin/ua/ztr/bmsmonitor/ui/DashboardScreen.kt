@@ -1,0 +1,217 @@
+package ua.ztr.bmsmonitor.ui
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import ua.ztr.bmsble.BmsConnectionState
+import ua.ztr.bmsble.BmsState
+import ua.ztr.bmsble.BmsStatusFlags
+import ua.ztr.bmsble.ProtectionCode
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+@Composable
+fun DashboardScreen(
+    deviceName: String?,
+    connectionState: BmsConnectionState,
+    state: BmsState,
+    onScreenOn: () -> Unit,
+    onScreenOff: () -> Unit,
+    onDisconnect: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxSize()) {
+        ConnectionBanner(deviceName, connectionState, onDisconnect)
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            item { Section("Основні показники") { BasicInfoCard(state) } }
+            item { Section("Комірки") { CellStatsCard(state) } }
+            item { Section("Статус і захист") { StatusCard(state) } }
+            item { Section("Ємність і цикли") { CapacityCard(state) } }
+            state.settings?.let { settings ->
+                item { Section("Налаштування") { SettingsCard(settings) } }
+            }
+            item {
+                Section("Керування") {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = onScreenOn) { Text("Екран увімк.") }
+                        OutlinedButton(onClick = onScreenOff) { Text("Екран вимк.") }
+                    }
+                }
+            }
+            state.lastUpdated.takeIf { it > 0 }?.let { ts ->
+                item {
+                    Text(
+                        "Останнє оновлення: ${formatTime(ts)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(vertical = 8.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ConnectionBanner(deviceName: String?, state: BmsConnectionState, onDisconnect: () -> Unit) {
+    val (label, color) = when (state) {
+        BmsConnectionState.DISCONNECTED -> "Відключено" to ColorAlarm
+        BmsConnectionState.CONNECTING -> "Підключення…" to ColorWarning
+        BmsConnectionState.DISCOVERING_SERVICES -> "Пошук сервісів…" to ColorWarning
+        BmsConnectionState.SUBSCRIBING -> "Підписка на дані…" to ColorWarning
+        BmsConnectionState.READY -> "Підключено" to ColorOk
+        BmsConnectionState.FAILED -> "Помилка з'єднання" to ColorAlarm
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column {
+            Text(deviceName ?: "BMS", style = MaterialTheme.typography.titleLarge)
+            Text(label, style = MaterialTheme.typography.bodyMedium, color = color)
+        }
+        Button(onClick = onDisconnect) { Text("Відключити") }
+    }
+    HorizontalDivider()
+}
+
+@Composable
+private fun Section(title: String, content: @Composable () -> Unit) {
+    Column {
+        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+            colors = CardDefaults.cardColors(),
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) { content() }
+        }
+    }
+}
+
+@Composable
+private fun MetricRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyMedium)
+        Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
+private fun BasicInfoCard(state: BmsState) {
+    MetricRow("Загальна напруга", fmt(state.totalVoltage, "В"))
+    MetricRow("Струм", fmt(state.current, "А") + "  (знак не підтверджено)")
+    MetricRow("Номінальна ємність", fmt(state.ratedCapacityAh, "Аг"))
+    MetricRow("Кількість комірок", state.cellCount?.toString() ?: "—")
+    MetricRow("Температура", fmt(state.temperatureC, "°C") + "  (від'ємні значення не підтверджено)")
+}
+
+@Composable
+private fun CellStatsCard(state: BmsState) {
+    MetricRow("Мін. напруга комірки", fmt(state.minCellVoltage, "В", 3))
+    MetricRow("Макс. напруга комірки", fmt(state.maxCellVoltage, "В", 3))
+    MetricRow("Різниця (макс-мін)", fmt(state.cellVoltageDiff, "В", 3))
+    MetricRow("Напруга старту балансування", fmt(state.balanceStartVoltage, "В"))
+    MetricRow("Опорна напруга балансування", fmt(state.balanceBaselineVoltage, "В", 3))
+}
+
+@Composable
+private fun StatusCard(state: BmsState) {
+    val status = state.status
+    if (status != null) {
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(bottom = 8.dp)) {
+            if (status.isCharging) StatusChip("Заряджається", ColorOk)
+            if (status.isBalancing) StatusChip("Балансування", ColorOk)
+        }
+        val alarms = buildList {
+            if (status.alarmLowVoltage) add("Напруга нижче порогу")
+            if (status.alarmOverCurrent) add("Струм вище порогу")
+            if (status.alarmWrongCellCount) add("Невірна кількість комірок")
+            if (status.alarmHighVoltage) add("Напруга вище порогу")
+            if (status.alarmHighTemperature) add("Температура вище порогу")
+        }
+        if (alarms.isNotEmpty()) {
+            Column(modifier = Modifier.padding(bottom = 8.dp)) {
+                alarms.forEach { StatusChip(it, ColorAlarm) }
+            }
+        }
+    }
+    MetricRow("Код захисту", protectionLabel(state.protectionCode))
+    if ((state.triggeringCellNumber ?: 0) > 0) {
+        MetricRow("Комірка, що спричинила захист", "№${state.triggeringCellNumber}")
+    }
+    MetricRow("Канал за замовчуванням", boolLabel(state.defaultChannelOn, "увімк.", "вимк."))
+    MetricRow("Екран", boolLabel(state.screenOff, "вимкнено", "увімкнено"))
+    MetricRow("Напруга відновлення заряду", fmt(state.chargeRecoveryVoltage, "В"))
+    MetricRow("Напруга відновлення розряду", fmt(state.dischargeRecoveryVoltage, "В"))
+}
+
+@Composable
+private fun StatusChip(text: String, color: Color) {
+    AssistChip(
+        onClick = {},
+        label = { Text(text) },
+        modifier = Modifier.wrapContentWidth(),
+        colors = AssistChipDefaults.assistChipColors(labelColor = color),
+    )
+}
+
+@Composable
+private fun CapacityCard(state: BmsState) {
+    MetricRow("Використана ємність", fmt(state.usedCapacityAh, "Аг"))
+    MetricRow("Кумулятивна розряджена ємність", fmt(state.cumulativeDischargeCapacityAh, "Аг"))
+    MetricRow("Кумулятивні цикли (розрах.)", state.cumulativeCycles?.let { "%.2f".format(it) } ?: "—")
+}
+
+@Composable
+private fun SettingsCard(settings: ua.ztr.bmsble.BmsSettings) {
+    MetricRow("Затримка передзаряду", "${settings.preChargeDelaySec} с")
+    MetricRow("Поріг різниці напруг комірок", "%.2f В".format(settings.cellVoltageDiffThreshold))
+    MetricRow("Автоскидання ємності", if (settings.autoResetCapacity) "увімк." else "вимк.")
+    MetricRow("Поріг низької температури", settings.lowTemperatureThreshold.toString())
+    MetricRow("Тип датчика струму", settings.currentSensorType.toString())
+}
+
+private fun protectionLabel(code: ProtectionCode?): String =
+    if (code == null) "—" else code.description
+
+private fun boolLabel(value: Boolean?, whenTrue: String, whenFalse: String): String = when (value) {
+    true -> whenTrue
+    false -> whenFalse
+    null -> "—"
+}
+
+private fun fmt(value: Double?, unit: String, decimals: Int = 2): String =
+    if (value == null) "—" else "%.${decimals}f %s".format(value, unit)
+
+private fun formatTime(timestampMs: Long): String =
+    SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(timestampMs))

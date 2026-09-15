@@ -1,0 +1,98 @@
+package ua.ztr.bmsmonitor
+
+import android.app.Application
+import android.bluetooth.BluetoothDevice
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onCompletion
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.update
+import ua.ztr.bmsble.BmsBleClient
+import ua.ztr.bmsble.BmsCommands
+import ua.ztr.bmsble.BmsConnection
+import ua.ztr.bmsble.BmsConnectionState
+import ua.ztr.bmsble.BmsState
+
+/** UI-модель одного знайденого пристрою (адреса, а не сам [BluetoothDevice], зручніше для Compose-стану). */
+data class ScannedDevice(
+    val name: String,
+    val address: String,
+    val device: BluetoothDevice,
+)
+
+class BmsViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val client = BmsBleClient(application)
+
+    private val _isScanning = MutableStateFlow(false)
+    val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
+
+    private val _scanResults = MutableStateFlow<List<ScannedDevice>>(emptyList())
+    val scanResults: StateFlow<List<ScannedDevice>> = _scanResults.asStateFlow()
+
+    private val _connectionState = MutableStateFlow(BmsConnectionState.DISCONNECTED)
+    val connectionState: StateFlow<BmsConnectionState> = _connectionState.asStateFlow()
+
+    private val _bmsState = MutableStateFlow(BmsState())
+    val bmsState: StateFlow<BmsState> = _bmsState.asStateFlow()
+
+    private val _connectedDeviceName = MutableStateFlow<String?>(null)
+    val connectedDeviceName: StateFlow<String?> = _connectedDeviceName.asStateFlow()
+
+    private var scanJob: Job? = null
+    private var connection: BmsConnection? = null
+
+    fun startScan() {
+        if (_isScanning.value) return
+        _scanResults.value = emptyList()
+        _isScanning.value = true
+        scanJob = client.scan(timeoutMs = 12_000)
+            .onEach { device ->
+                val name = device.name ?: "(без імені)"
+                _scanResults.update { it + ScannedDevice(name, device.address, device) }
+            }
+            .onCompletion { _isScanning.value = false }
+            .launchIn(viewModelScope)
+    }
+
+    fun stopScan() {
+        scanJob?.cancel()
+        _isScanning.value = false
+    }
+
+    fun connect(target: ScannedDevice) {
+        stopScan()
+        connection?.close()
+        _bmsState.value = BmsState()
+        _connectedDeviceName.value = target.name
+
+        val newConnection = client.connect(target.device)
+        connection = newConnection
+
+        newConnection.connectionState.onEach { _connectionState.value = it }.launchIn(viewModelScope)
+        newConnection.state.onEach { _bmsState.value = it }.launchIn(viewModelScope)
+    }
+
+    fun disconnect() {
+        connection?.close()
+        connection = null
+        _connectionState.value = BmsConnectionState.DISCONNECTED
+        _bmsState.value = BmsState()
+        _connectedDeviceName.value = null
+    }
+
+    fun setScreenOn(on: Boolean) {
+        val command = if (on) BmsCommands.screenOn() else BmsCommands.screenOff()
+        connection?.sendCommand(command)
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        connection?.close()
+    }
+}
