@@ -18,15 +18,30 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BatteryFull
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -34,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
 import ua.ztr.bmsble.BmsConnectionState
 import ua.ztr.bmsmonitor.ui.BmsMonitorTheme
 import ua.ztr.bmsmonitor.ui.CellVoltagesScreen
@@ -41,7 +57,11 @@ import ua.ztr.bmsmonitor.ui.DashboardScreen
 import ua.ztr.bmsmonitor.ui.ScanScreen
 import ua.ztr.bmsmonitor.ui.SettingsScreen
 
-private enum class AppScreen { Dashboard, Settings, CellVoltages }
+private enum class AppScreen(val title: String) {
+    Dashboard("Дашборд"),
+    Settings("Налаштування"),
+    CellVoltages("Напруги комірок"),
+}
 
 private fun requiredBluetoothPermissions(): Array<String> =
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -150,70 +170,121 @@ private fun AppRoot(viewModel: BmsViewModel) {
         }
     }
 
-    Scaffold { padding ->
-        if (connectionState == BmsConnectionState.DISCONNECTED && deviceName == null) {
+    if (connectionState == BmsConnectionState.DISCONNECTED && deviceName == null) {
+        Scaffold { padding ->
             ScanScreen(
                 isScanning = isScanning,
                 devices = scanResults,
                 onScanClick = { viewModel.startScan() },
                 onDeviceClick = { viewModel.connect(it) },
-                modifier = Modifier.padding(padding),
-            )
-        } else when (screen) {
-            AppScreen.Dashboard -> DashboardScreen(
-                deviceName = deviceName,
-                connectionState = connectionState,
-                state = bmsState,
-                logLines = logLines,
-                onScreenOn = { viewModel.setScreenOn(true) },
-                onScreenOff = { viewModel.setScreenOn(false) },
-                onChannelOpen = { viewModel.setChannel(it) },
-                onAutoBalance = { viewModel.setAutoBalance(it) },
-                onOpenSettings = { screen = AppScreen.Settings },
-                onOpenCellVoltages = { screen = AppScreen.CellVoltages },
-                onDisconnect = { viewModel.disconnect() },
-                onShareLog = logFile?.let { file -> { shareLogFile(context, file) } },
-                modifier = Modifier.padding(padding),
-            )
-
-            AppScreen.Settings -> SettingsScreen(
-                state = bmsState,
-                onBack = { screen = AppScreen.Dashboard },
-                onDischargeCutoffVoltage = { viewModel.setDischargeCutoffVoltage(it) },
-                onDischargeProtectionCurrent = { viewModel.setDischargeProtectionCurrent(it) },
-                onMaxBatteryCapacityAh = { viewModel.setMaxBatteryCapacityAh(it) },
-                onTotalCellCount = { viewModel.setTotalCellCount(it) },
-                onChargeCutoffVoltage = { viewModel.setChargeCutoffVoltage(it) },
-                onHighTemperatureProtection = { viewModel.setHighTemperatureProtection(it) },
-                onChargeRecoveryVoltage = { viewModel.setChargeRecoveryVoltage(it) },
-                onDischargeRecoveryVoltage = { viewModel.setDischargeRecoveryVoltage(it) },
-                onDefaultChannelState = { viewModel.setDefaultChannelState(it) },
-                onLowVoltageHostShutdown = { viewModel.setLowVoltageHostShutdown(it) },
-                onHostPowerOffDelaySec = { viewModel.setHostPowerOffDelaySec(it) },
-                onChargeBalanceVoltage = { viewModel.setChargeBalanceVoltage(it) },
-                onUsedCapacityAh = { viewModel.setUsedCapacityAh(it) },
-                onAutoResetCapacity = { viewModel.setAutoResetCapacity(it) },
-                onPreChargeDelaySec = { viewModel.setPreChargeDelaySec(it) },
-                onCellVoltageDiffThreshold = { viewModel.setCellVoltageDiffThreshold(it) },
-                onLowTemperatureThreshold = { viewModel.setLowTemperatureThreshold(it) },
-                onCurrentSensorType = { viewModel.setCurrentSensorType(it) },
-                onFanStartTemperature = { viewModel.setFanStartTemperature(it) },
-                onHeaterStartTemperature = { viewModel.setHeaterStartTemperature(it) },
-                onCanSendId = { viewModel.setCanSendId(it) },
-                onCanReceiveId = { viewModel.setCanReceiveId(it) },
-                onClearAction9 = { viewModel.clearAction9() },
-                onResetDischargeCapacity = { viewModel.resetDischargeCapacity() },
-                onClearCycleCounter = { viewModel.clearCycleCounter() },
-                modifier = Modifier.padding(padding),
-            )
-
-            AppScreen.CellVoltages -> CellVoltagesScreen(
-                state = bmsState,
-                onBack = { screen = AppScreen.Dashboard },
+                onDemoClick = if (BuildConfig.DEBUG) ({ viewModel.connectDemo() }) else null,
                 modifier = Modifier.padding(padding),
             )
         }
+        return
     }
+
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet {
+                NavigationDrawerItem(
+                    label = { Text(AppScreen.Dashboard.title) },
+                    icon = { Icon(Icons.Default.Home, contentDescription = null) },
+                    selected = screen == AppScreen.Dashboard,
+                    onClick = { screen = AppScreen.Dashboard; scope.launch { drawerState.close() } },
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                )
+                NavigationDrawerItem(
+                    label = { Text(AppScreen.Settings.title) },
+                    icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                    selected = screen == AppScreen.Settings,
+                    onClick = { screen = AppScreen.Settings; scope.launch { drawerState.close() } },
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                )
+                NavigationDrawerItem(
+                    label = { Text(AppScreen.CellVoltages.title) },
+                    icon = { Icon(Icons.Default.BatteryFull, contentDescription = null) },
+                    selected = screen == AppScreen.CellVoltages,
+                    onClick = { screen = AppScreen.CellVoltages; scope.launch { drawerState.close() } },
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                )
+            }
+        },
+    ) {
+        Scaffold(
+            topBar = {
+                AppTopBar(title = screen.title, onMenuClick = { scope.launch { drawerState.open() } })
+            },
+        ) { padding ->
+            when (screen) {
+                AppScreen.Dashboard -> DashboardScreen(
+                    deviceName = deviceName,
+                    connectionState = connectionState,
+                    state = bmsState,
+                    logLines = logLines,
+                    onScreenOn = { viewModel.setScreenOn(true) },
+                    onScreenOff = { viewModel.setScreenOn(false) },
+                    onChannelOpen = { viewModel.setChannel(it) },
+                    onAutoBalance = { viewModel.setAutoBalance(it) },
+                    onDisconnect = { viewModel.disconnect() },
+                    onShareLog = logFile?.let { file -> { shareLogFile(context, file) } },
+                    modifier = Modifier.padding(padding),
+                )
+
+                AppScreen.Settings -> SettingsScreen(
+                    state = bmsState,
+                    onDischargeCutoffVoltage = { viewModel.setDischargeCutoffVoltage(it) },
+                    onDischargeProtectionCurrent = { viewModel.setDischargeProtectionCurrent(it) },
+                    onMaxBatteryCapacityAh = { viewModel.setMaxBatteryCapacityAh(it) },
+                    onTotalCellCount = { viewModel.setTotalCellCount(it) },
+                    onChargeCutoffVoltage = { viewModel.setChargeCutoffVoltage(it) },
+                    onHighTemperatureProtection = { viewModel.setHighTemperatureProtection(it) },
+                    onChargeRecoveryVoltage = { viewModel.setChargeRecoveryVoltage(it) },
+                    onDischargeRecoveryVoltage = { viewModel.setDischargeRecoveryVoltage(it) },
+                    onDefaultChannelState = { viewModel.setDefaultChannelState(it) },
+                    onLowVoltageHostShutdown = { viewModel.setLowVoltageHostShutdown(it) },
+                    onHostPowerOffDelaySec = { viewModel.setHostPowerOffDelaySec(it) },
+                    onChargeBalanceVoltage = { viewModel.setChargeBalanceVoltage(it) },
+                    onUsedCapacityAh = { viewModel.setUsedCapacityAh(it) },
+                    onAutoResetCapacity = { viewModel.setAutoResetCapacity(it) },
+                    onPreChargeDelaySec = { viewModel.setPreChargeDelaySec(it) },
+                    onCellVoltageDiffThreshold = { viewModel.setCellVoltageDiffThreshold(it) },
+                    onLowTemperatureThreshold = { viewModel.setLowTemperatureThreshold(it) },
+                    onCurrentSensorType = { viewModel.setCurrentSensorType(it) },
+                    onFanStartTemperature = { viewModel.setFanStartTemperature(it) },
+                    onHeaterStartTemperature = { viewModel.setHeaterStartTemperature(it) },
+                    onCanSendId = { viewModel.setCanSendId(it) },
+                    onCanReceiveId = { viewModel.setCanReceiveId(it) },
+                    onClearAction9 = { viewModel.clearAction9() },
+                    onResetDischargeCapacity = { viewModel.resetDischargeCapacity() },
+                    onClearCycleCounter = { viewModel.clearCycleCounter() },
+                    modifier = Modifier.padding(padding),
+                )
+
+                AppScreen.CellVoltages -> CellVoltagesScreen(
+                    state = bmsState,
+                    modifier = Modifier.padding(padding),
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AppTopBar(title: String, onMenuClick: () -> Unit) {
+    TopAppBar(
+        title = { Text(title) },
+        navigationIcon = {
+            IconButton(onClick = onMenuClick) {
+                Icon(Icons.Default.Menu, contentDescription = "Меню")
+            }
+        },
+    )
 }
 
 @Composable

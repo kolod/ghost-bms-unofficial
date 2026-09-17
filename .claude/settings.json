@@ -12,7 +12,8 @@
       "Bash(cp \"C:/Users/alexa/Projects/BMS/tools/signed_apk2.apk\" \"C:/Users/alexa/AppData/Local/Temp/bms-apk-serve/xue18-patched2.apk\")",
       "Read(//c/Users/alexa/AppData/Local/Temp/bms-apk-serve/**)",
       "Bash(curl -sI http://127.0.0.1/xue18-patched1.apk)",
-      "Bash(curl -sI http://127.0.0.1/xue18-patched2.apk)"
+      "Bash(curl -sI http://127.0.0.1/xue18-patched2.apk)",
+      "Bash(./gradlew.bat :app:compileDebugKotlin)"
     ],
     "additionalDirectories": [
       "C:\\Users\\alexa\\Projects\\BMS"

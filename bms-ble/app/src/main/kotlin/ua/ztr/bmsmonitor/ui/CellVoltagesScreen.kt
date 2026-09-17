@@ -11,11 +11,8 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,38 +25,30 @@ import ua.ztr.bmsble.BmsState
  * застосунок сам ніде не показує живу напругу для комірок >96 — цей протокол їх
  * не передає (лише прапорці балансування), тож сітка обмежена 96 комірками.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CellVoltagesScreen(
     state: BmsState,
-    onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val cellCount = (state.cellCount ?: 96).coerceIn(0, 96)
 
-    Column(modifier = modifier.fillMaxSize()) {
-        TopAppBar(
-            title = { Text("Напруги комірок") },
-            navigationIcon = { TextButton(onClick = onBack) { Text("← Назад") } },
-        )
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(3),
-            modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(vertical = 12.dp),
-        ) {
-            items(cellCount) { index ->
-                val cellNumber = index + 1
-                CellVoltageTile(cellNumber, state.cellVoltages[cellNumber])
-            }
-            state.moduleTemperaturesC?.let { temps ->
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    Section("Температура модулів") {
-                        Column {
-                            temps.forEachIndexed { i, t ->
-                                MetricRow("Модуль ${i + 1}", "%.1f °C".format(t))
-                            }
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(3),
+        modifier = modifier.fillMaxSize().padding(horizontal = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(vertical = 12.dp),
+    ) {
+        items(cellCount) { index ->
+            val cellNumber = index + 1
+            CellVoltageTile(cellNumber, state.cellVoltages[cellNumber])
+        }
+        state.moduleTemperaturesC?.let { temps ->
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Section("Температура модулів") {
+                    Column {
+                        temps.forEachIndexed { i, t ->
+                            MetricRow("Модуль ${i + 1}", "%.1f °C".format(t))
                         }
                     }
                 }

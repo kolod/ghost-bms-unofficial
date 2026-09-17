@@ -12,13 +12,11 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,11 +34,9 @@ import ua.ztr.bmsble.BmsState
  * трафіку. Кожне поле, що використовує цю гіпотезу, позначене ⚠ і попереджує в
  * діалозі редагування — звіряйте показник на пристрої після кожної зміни.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     state: BmsState,
-    onBack: () -> Unit,
     onDischargeCutoffVoltage: (Double) -> Unit,
     onDischargeProtectionCurrent: (Double) -> Unit,
     onMaxBatteryCapacityAh: (Double) -> Unit,
@@ -71,10 +67,6 @@ fun SettingsScreen(
     val settings = state.settings
 
     Column(modifier = modifier.fillMaxSize()) {
-        TopAppBar(
-            title = { Text("Налаштування BMS") },
-            navigationIcon = { TextButton(onClick = onBack) { Text("← Назад") } },
-        )
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),

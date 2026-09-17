@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import java.io.File
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,6 +14,8 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import ua.ztr.bmsble.BmsBleClient
 import ua.ztr.bmsble.BmsCommands
 import ua.ztr.bmsble.BmsConnection
@@ -55,6 +58,7 @@ class BmsViewModel(application: Application) : AndroidViewModel(application) {
 
     private var scanJob: Job? = null
     private var connection: BmsConnection? = null
+    private var demoJob: Job? = null
 
     fun startScan() {
         if (_isScanning.value) return
@@ -76,6 +80,7 @@ class BmsViewModel(application: Application) : AndroidViewModel(application) {
 
     fun connect(target: ScannedDevice) {
         stopScan()
+        stopDemo()
         connection?.close()
         _bmsState.value = BmsState()
         _connectedDeviceName.value = target.name
@@ -90,7 +95,47 @@ class BmsViewModel(application: Application) : AndroidViewModel(application) {
         newConnection.logger.lines.onEach { _logLines.value = it }.launchIn(viewModelScope)
     }
 
+    /**
+     * Емулює підключений пристрій без реального BLE — для перевірки UI в debug-збірці
+     * (кнопка "Демо-режим" на екрані сканування, показується лише коли [BuildConfig.DEBUG]).
+     * Дані генеруються локально ([DemoBmsData]) і плавно змінюються, щоб імітувати живий потік.
+     */
+    fun connectDemo() {
+        stopScan()
+        connection?.close()
+        connection = null
+        stopDemo()
+
+        _bmsState.value = BmsState()
+        _connectedDeviceName.value = "🧪 Демо-режим"
+        _logFile.value = null
+        _logLines.value = listOf("Демо-режим: дані згенеровано локально, реального BLE-з'єднання немає.")
+
+        demoJob = viewModelScope.launch {
+            _connectionState.value = BmsConnectionState.CONNECTING
+            delay(300)
+            _connectionState.value = BmsConnectionState.DISCOVERING_SERVICES
+            delay(300)
+            _connectionState.value = BmsConnectionState.SUBSCRIBING
+            delay(300)
+            _connectionState.value = BmsConnectionState.READY
+
+            var tick = 0
+            while (isActive) {
+                _bmsState.value = DemoBmsData.state(tick)
+                tick++
+                delay(1000)
+            }
+        }
+    }
+
+    private fun stopDemo() {
+        demoJob?.cancel()
+        demoJob = null
+    }
+
     fun disconnect() {
+        stopDemo()
         connection?.close()
         connection = null
         _connectionState.value = BmsConnectionState.DISCONNECTED
@@ -138,6 +183,7 @@ class BmsViewModel(application: Application) : AndroidViewModel(application) {
 
     override fun onCleared() {
         super.onCleared()
+        stopDemo()
         connection?.close()
     }
 }

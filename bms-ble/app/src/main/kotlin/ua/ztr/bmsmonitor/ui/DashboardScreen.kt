@@ -52,8 +52,6 @@ fun DashboardScreen(
     onScreenOff: () -> Unit,
     onChannelOpen: (Boolean) -> Unit,
     onAutoBalance: (Boolean) -> Unit,
-    onOpenSettings: () -> Unit,
-    onOpenCellVoltages: () -> Unit,
     onDisconnect: () -> Unit,
     onShareLog: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
@@ -86,10 +84,6 @@ fun DashboardScreen(
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(onClick = { onAutoBalance(true) }) { Text("Баланс увімк.") }
                             OutlinedButton(onClick = { onAutoBalance(false) }) { Text("Баланс вимк.") }
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedButton(onClick = onOpenSettings) { Text("⚙ Налаштування") }
-                            OutlinedButton(onClick = onOpenCellVoltages) { Text("🔋 Напруги комірок") }
                         }
                     }
                 }

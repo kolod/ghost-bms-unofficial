@@ -15,8 +15,10 @@ import androidx.compose.material.icons.automirrored.filled.BluetoothSearching
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -30,6 +32,8 @@ fun ScanScreen(
     devices: List<ScannedDevice>,
     onScanClick: () -> Unit,
     onDeviceClick: (ScannedDevice) -> Unit,
+    /** Не-null лише в debug-збірці — кнопка емуляції підключеного пристрою для перевірки UI. */
+    onDemoClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
@@ -62,7 +66,7 @@ fun ScanScreen(
             )
         }
 
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(top = 8.dp)) {
+        LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f).padding(top = 8.dp)) {
             items(devices, key = { it.address }) { scanned ->
                 Card(
                     modifier = Modifier
@@ -75,6 +79,13 @@ fun ScanScreen(
                         Text(scanned.address, style = MaterialTheme.typography.bodySmall)
                     }
                 }
+            }
+        }
+
+        if (onDemoClick != null) {
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            OutlinedButton(onClick = onDemoClick, modifier = Modifier.fillMaxWidth()) {
+                Text("🧪 Демо-режим (емуляція підключеного пристрою)")
             }
         }
     }
