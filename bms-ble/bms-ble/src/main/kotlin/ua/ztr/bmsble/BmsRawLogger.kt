@@ -30,7 +30,9 @@ class BmsRawLogger(context: Context) {
         val dir = File(context.getExternalFilesDir(null), "logs")
         dir.mkdirs()
         val name = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-        File(dir, "bms_$name.log")
+        // .txt, а не .log — деякі застосунки (напр. Viber) відхиляють поширення файлів
+        // з нетиповим розширенням через share-інтент, хоча Android це не обмежує.
+        File(dir, "bms_$name.txt")
     }
 
     private val _lines = MutableStateFlow<List<String>>(emptyList())

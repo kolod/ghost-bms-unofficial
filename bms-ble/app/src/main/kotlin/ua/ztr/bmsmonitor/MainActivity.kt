@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -22,6 +23,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,8 +36,12 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ua.ztr.bmsble.BmsConnectionState
 import ua.ztr.bmsmonitor.ui.BmsMonitorTheme
+import ua.ztr.bmsmonitor.ui.CellVoltagesScreen
 import ua.ztr.bmsmonitor.ui.DashboardScreen
 import ua.ztr.bmsmonitor.ui.ScanScreen
+import ua.ztr.bmsmonitor.ui.SettingsScreen
+
+private enum class AppScreen { Dashboard, Settings, CellVoltages }
 
 private fun requiredBluetoothPermissions(): Array<String> =
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -136,6 +142,14 @@ private fun AppRoot(viewModel: BmsViewModel) {
     val logFile by viewModel.logFile.collectAsStateWithLifecycle()
     val logLines by viewModel.logLines.collectAsStateWithLifecycle()
 
+    var screen by remember { mutableStateOf(AppScreen.Dashboard) }
+    BackHandler(enabled = screen != AppScreen.Dashboard) { screen = AppScreen.Dashboard }
+    LaunchedEffect(connectionState, deviceName) {
+        if (connectionState == BmsConnectionState.DISCONNECTED && deviceName == null) {
+            screen = AppScreen.Dashboard
+        }
+    }
+
     Scaffold { padding ->
         if (connectionState == BmsConnectionState.DISCONNECTED && deviceName == null) {
             ScanScreen(
@@ -145,16 +159,57 @@ private fun AppRoot(viewModel: BmsViewModel) {
                 onDeviceClick = { viewModel.connect(it) },
                 modifier = Modifier.padding(padding),
             )
-        } else {
-            DashboardScreen(
+        } else when (screen) {
+            AppScreen.Dashboard -> DashboardScreen(
                 deviceName = deviceName,
                 connectionState = connectionState,
                 state = bmsState,
                 logLines = logLines,
                 onScreenOn = { viewModel.setScreenOn(true) },
                 onScreenOff = { viewModel.setScreenOn(false) },
+                onChannelOpen = { viewModel.setChannel(it) },
+                onAutoBalance = { viewModel.setAutoBalance(it) },
+                onOpenSettings = { screen = AppScreen.Settings },
+                onOpenCellVoltages = { screen = AppScreen.CellVoltages },
                 onDisconnect = { viewModel.disconnect() },
                 onShareLog = logFile?.let { file -> { shareLogFile(context, file) } },
+                modifier = Modifier.padding(padding),
+            )
+
+            AppScreen.Settings -> SettingsScreen(
+                state = bmsState,
+                onBack = { screen = AppScreen.Dashboard },
+                onDischargeCutoffVoltage = { viewModel.setDischargeCutoffVoltage(it) },
+                onDischargeProtectionCurrent = { viewModel.setDischargeProtectionCurrent(it) },
+                onMaxBatteryCapacityAh = { viewModel.setMaxBatteryCapacityAh(it) },
+                onTotalCellCount = { viewModel.setTotalCellCount(it) },
+                onChargeCutoffVoltage = { viewModel.setChargeCutoffVoltage(it) },
+                onHighTemperatureProtection = { viewModel.setHighTemperatureProtection(it) },
+                onChargeRecoveryVoltage = { viewModel.setChargeRecoveryVoltage(it) },
+                onDischargeRecoveryVoltage = { viewModel.setDischargeRecoveryVoltage(it) },
+                onDefaultChannelState = { viewModel.setDefaultChannelState(it) },
+                onLowVoltageHostShutdown = { viewModel.setLowVoltageHostShutdown(it) },
+                onHostPowerOffDelaySec = { viewModel.setHostPowerOffDelaySec(it) },
+                onChargeBalanceVoltage = { viewModel.setChargeBalanceVoltage(it) },
+                onUsedCapacityAh = { viewModel.setUsedCapacityAh(it) },
+                onAutoResetCapacity = { viewModel.setAutoResetCapacity(it) },
+                onPreChargeDelaySec = { viewModel.setPreChargeDelaySec(it) },
+                onCellVoltageDiffThreshold = { viewModel.setCellVoltageDiffThreshold(it) },
+                onLowTemperatureThreshold = { viewModel.setLowTemperatureThreshold(it) },
+                onCurrentSensorType = { viewModel.setCurrentSensorType(it) },
+                onFanStartTemperature = { viewModel.setFanStartTemperature(it) },
+                onHeaterStartTemperature = { viewModel.setHeaterStartTemperature(it) },
+                onCanSendId = { viewModel.setCanSendId(it) },
+                onCanReceiveId = { viewModel.setCanReceiveId(it) },
+                onClearAction9 = { viewModel.clearAction9() },
+                onResetDischargeCapacity = { viewModel.resetDischargeCapacity() },
+                onClearCycleCounter = { viewModel.clearCycleCounter() },
+                modifier = Modifier.padding(padding),
+            )
+
+            AppScreen.CellVoltages -> CellVoltagesScreen(
+                state = bmsState,
+                onBack = { screen = AppScreen.Dashboard },
                 modifier = Modifier.padding(padding),
             )
         }

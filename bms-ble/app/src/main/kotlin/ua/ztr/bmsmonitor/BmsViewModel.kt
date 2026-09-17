@@ -103,6 +103,39 @@ class BmsViewModel(application: Application) : AndroidViewModel(application) {
         connection?.sendCommand(command)
     }
 
+    private fun send(command: ByteArray) {
+        connection?.sendCommand(command)
+    }
+
+    fun setChannel(open: Boolean) = send(BmsCommands.setChannel(open))
+    fun setAutoBalance(on: Boolean) = send(BmsCommands.setAutoBalance(on))
+    fun clearAction9() = send(BmsCommands.clearAction9())
+    fun resetDischargeCapacity() = send(BmsCommands.resetDischargeCapacity())
+    fun clearCycleCounter() = send(BmsCommands.clearCycleCounter())
+
+    fun setDischargeCutoffVoltage(volts: Double) = send(BmsCommands.dischargeCutoffVoltage(volts))
+    fun setDischargeProtectionCurrent(amps: Double) = send(BmsCommands.dischargeProtectionCurrent(amps))
+    fun setMaxBatteryCapacityAh(ah: Double) = send(BmsCommands.maxBatteryCapacityAh(ah))
+    fun setTotalCellCount(count: Int) = send(BmsCommands.totalCellCount(count))
+    fun setChargeCutoffVoltage(volts: Double) = send(BmsCommands.chargeCutoffVoltage(volts))
+    fun setHighTemperatureProtection(celsius: Double) = send(BmsCommands.highTemperatureProtection(celsius))
+    fun setChargeRecoveryVoltage(volts: Double) = send(BmsCommands.chargeRecoveryVoltage(volts))
+    fun setDischargeRecoveryVoltage(volts: Double) = send(BmsCommands.dischargeRecoveryVoltage(volts))
+    fun setDefaultChannelState(on: Boolean) = send(BmsCommands.defaultChannelState(on))
+    fun setLowVoltageHostShutdown(volts: Double) = send(BmsCommands.lowVoltageHostShutdown(volts))
+    fun setHostPowerOffDelaySec(seconds: Int) = send(BmsCommands.hostPowerOffDelaySec(seconds))
+    fun setChargeBalanceVoltage(volts: Double) = send(BmsCommands.chargeBalanceVoltage(volts))
+    fun setUsedCapacityAh(ah: Int) = send(BmsCommands.usedCapacityAh(ah))
+    fun setAutoResetCapacity(on: Boolean) = send(BmsCommands.autoResetCapacity(on))
+    fun setPreChargeDelaySec(seconds: Int) = send(BmsCommands.preChargeDelaySec(seconds))
+    fun setCellVoltageDiffThreshold(volts: Double) = send(BmsCommands.cellVoltageDiffThreshold(volts))
+    fun setLowTemperatureThreshold(celsius: Int) = send(BmsCommands.lowTemperatureThreshold(celsius))
+    fun setCurrentSensorType(type: Int) = send(BmsCommands.currentSensorType(type))
+    fun setFanStartTemperature(celsius: Int) = send(BmsCommands.fanStartTemperature(celsius))
+    fun setHeaterStartTemperature(celsius: Int) = send(BmsCommands.heaterStartTemperature(celsius))
+    fun setCanSendId(id: Int) = send(BmsCommands.canSendId(id))
+    fun setCanReceiveId(id: Int) = send(BmsCommands.canReceiveId(id))
+
     override fun onCleared() {
         super.onCleared()
         connection?.close()

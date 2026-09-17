@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
@@ -49,6 +50,10 @@ fun DashboardScreen(
     logLines: List<String> = emptyList(),
     onScreenOn: () -> Unit,
     onScreenOff: () -> Unit,
+    onChannelOpen: (Boolean) -> Unit,
+    onAutoBalance: (Boolean) -> Unit,
+    onOpenSettings: () -> Unit,
+    onOpenCellVoltages: () -> Unit,
     onDisconnect: () -> Unit,
     onShareLog: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
@@ -69,9 +74,23 @@ fun DashboardScreen(
             }
             item {
                 Section("Керування") {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = onScreenOn) { Text("Екран увімк.") }
-                        OutlinedButton(onClick = onScreenOff) { Text("Екран вимк.") }
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick = onScreenOn) { Text("Екран увімк.") }
+                            OutlinedButton(onClick = onScreenOff) { Text("Екран вимк.") }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick = { onChannelOpen(true) }) { Text("Канал відкрити") }
+                            OutlinedButton(onClick = { onChannelOpen(false) }) { Text("Канал закрити") }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick = { onAutoBalance(true) }) { Text("Баланс увімк.") }
+                            OutlinedButton(onClick = { onAutoBalance(false) }) { Text("Баланс вимк.") }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick = onOpenSettings) { Text("⚙ Налаштування") }
+                            OutlinedButton(onClick = onOpenCellVoltages) { Text("🔋 Напруги комірок") }
+                        }
                     }
                 }
             }
@@ -136,22 +155,24 @@ private fun DiagnosticsPanel(logLines: List<String>, onShareLog: () -> Unit) {
             LaunchedEffect(logLines.size) {
                 if (logLines.isNotEmpty()) listState.animateScrollToItem(logLines.size - 1)
             }
-            LazyColumn(
-                state = listState,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 280.dp)
-                    .padding(top = 8.dp)
-                    .background(Color.Black),
-            ) {
-                items(logLines) { line ->
-                    Text(
-                        line,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontFamily = FontFamily.Monospace,
-                        color = Color(0xFF33FF33),
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
-                    )
+            SelectionContainer {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 280.dp)
+                        .padding(top = 8.dp)
+                        .background(Color.Black),
+                ) {
+                    items(logLines) { line ->
+                        Text(
+                            line,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontFamily = FontFamily.Monospace,
+                            color = Color(0xFF33FF33),
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
+                        )
+                    }
                 }
             }
         }
@@ -159,7 +180,7 @@ private fun DiagnosticsPanel(logLines: List<String>, onShareLog: () -> Unit) {
 }
 
 @Composable
-private fun Section(title: String, content: @Composable () -> Unit) {
+internal fun Section(title: String, content: @Composable () -> Unit) {
     Column {
         Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Card(
@@ -172,7 +193,7 @@ private fun Section(title: String, content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun MetricRow(label: String, value: String) {
+internal fun MetricRow(label: String, value: String) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -266,7 +287,7 @@ private fun boolLabel(value: Boolean?, whenTrue: String, whenFalse: String): Str
     null -> "—"
 }
 
-private fun fmt(value: Double?, unit: String, decimals: Int = 2): String =
+internal fun fmt(value: Double?, unit: String, decimals: Int = 2): String =
     if (value == null) "—" else "%.${decimals}f %s".format(value, unit)
 
 private fun formatTime(timestampMs: Long): String =

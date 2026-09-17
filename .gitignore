@@ -28,3 +28,7 @@ Thumbs.db
 
 # Downloaded/generated reverse-engineering tooling (apktool, decoded smali, signing key, rebuilt APKs)
 /tools/
+
+# Release signing key for bms-ble app (personal — never commit)
+*.keystore.jks
+keystore.properties

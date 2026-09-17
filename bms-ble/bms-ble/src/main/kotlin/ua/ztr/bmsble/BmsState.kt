@@ -22,10 +22,17 @@ data class BmsState(
     val minCellVoltage: Double? = null,
     val maxCellVoltage: Double? = null,
     val balanceBaselineVoltage: Double? = null,
+    /** Readout налаштування "низька напруга відключення хоста" (команда запису 0x0E). */
+    val lowVoltageHostShutdownVoltage: Double? = null,
+    /** Readout налаштування "затримка відключення хоста" (команда запису 0x0F). */
+    val hostShutdownDelaySeconds: Int? = null,
     val cumulativeDischargeCapacityAh: Double? = null,
     val cumulativeCycles: Double? = null,
     val triggeringCellNumber: Int? = null,
     val settings: BmsSettings? = null,
+    /** Напруги окремих комірок (номер 1-based → вольти). Комірки 97-192 протоколом не передаються. */
+    val cellVoltages: Map<Int, Double> = emptyMap(),
+    val moduleTemperaturesC: List<Double>? = null,
     val lastUpdated: Long = 0L,
 ) {
     val cellVoltageDiff: Double?
@@ -69,6 +76,8 @@ object BmsStateReducer {
                     minCellVoltage = frame.minCellVoltage,
                     maxCellVoltage = frame.maxCellVoltage,
                     balanceBaselineVoltage = frame.balanceBaselineVoltage,
+                    lowVoltageHostShutdownVoltage = frame.lowVoltageHostShutdownVoltage,
+                    hostShutdownDelaySeconds = frame.hostShutdownDelaySeconds,
                     cumulativeDischargeCapacityAh = frame.cumulativeDischargeCapacityAh,
                     cumulativeCycles = cycles,
                     lastUpdated = now,
@@ -77,11 +86,22 @@ object BmsStateReducer {
 
             is BmsFrame.ProtectionTriggerCell -> current.copy(
                 triggeringCellNumber = frame.cellNumber,
+                cellVoltages = current.cellVoltages + frame.remainderCells,
                 lastUpdated = now,
             )
 
             is BmsFrame.Settings -> current.copy(
                 settings = frame.data,
+                lastUpdated = now,
+            )
+
+            is BmsFrame.ModuleTemperatures -> current.copy(
+                moduleTemperaturesC = frame.probesC,
+                lastUpdated = now,
+            )
+
+            is BmsFrame.CellVoltages -> current.copy(
+                cellVoltages = current.cellVoltages + frame.cells,
                 lastUpdated = now,
             )
 
