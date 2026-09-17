@@ -50,12 +50,16 @@ class BmsConnection(
     private val _state = MutableStateFlow(BmsState())
     val state: StateFlow<BmsState> = _state.asStateFlow()
 
+    /** Діагностичний лог сирих байтів і подій GATT для цієї сесії — див. [BmsRawLogger]. */
+    val logger = BmsRawLogger(context)
+
     private var gatt: BluetoothGatt? = null
     private var writeCharacteristic: BluetoothGattCharacteristic? = null
 
     private val gattCallback = object : BluetoothGattCallback() {
 
         override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
+            logger.log("onConnectionStateChange status=$status newState=$newState")
             if (status != BluetoothGatt.GATT_SUCCESS) {
                 _connectionState.value = BmsConnectionState.FAILED
                 return
@@ -72,12 +76,17 @@ class BmsConnection(
         }
 
         override fun onServicesDiscovered(g: BluetoothGatt, status: Int) {
+            logger.log(
+                "onServicesDiscovered status=$status services=" +
+                    g.services.joinToString(",") { it.uuid.toString() },
+            )
             if (status != BluetoothGatt.GATT_SUCCESS) {
                 _connectionState.value = BmsConnectionState.FAILED
                 return
             }
             val characteristic = g.getService(BmsUuids.SERVICE)?.getCharacteristic(BmsUuids.CHARACTERISTIC)
             if (characteristic == null) {
+                logger.log("FFE0/FFE1 not found — expected service=${BmsUuids.SERVICE} characteristic=${BmsUuids.CHARACTERISTIC}")
                 _connectionState.value = BmsConnectionState.FAILED
                 return
             }
@@ -88,7 +97,9 @@ class BmsConnection(
             val cccd = characteristic.getDescriptor(BmsUuids.CLIENT_CHARACTERISTIC_CONFIG)
             if (cccd == null) {
                 // Немає дескриптора підписки — вважаємо, що нотифікації вже активні.
+                logger.log("no CCCD descriptor on characteristic — assuming notifications already active")
                 _connectionState.value = BmsConnectionState.READY
+                sendCommand(BmsCommands.enterRealtimeMonitoring())
                 return
             }
             @Suppress("DEPRECATION")
@@ -98,8 +109,15 @@ class BmsConnection(
         }
 
         override fun onDescriptorWrite(g: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int) {
-            _connectionState.value =
-                if (status == BluetoothGatt.GATT_SUCCESS) BmsConnectionState.READY else BmsConnectionState.FAILED
+            logger.log("onDescriptorWrite status=$status")
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                _connectionState.value = BmsConnectionState.READY
+                // Штатний застосунок шле цю команду перед відкриттям екрана показників —
+                // без неї BMS не починає штовхати нотифікації з даними.
+                sendCommand(BmsCommands.enterRealtimeMonitoring())
+            } else {
+                _connectionState.value = BmsConnectionState.FAILED
+            }
         }
 
         @Suppress("DEPRECATION")
@@ -115,18 +133,40 @@ class BmsConnection(
         ) {
             handleIncoming(value)
         }
+
+        override fun onCharacteristicWrite(
+            g: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic,
+            status: Int,
+        ) {
+            logger.log("onCharacteristicWrite status=$status")
+        }
+
+        override fun onMtuChanged(g: BluetoothGatt, mtu: Int, status: Int) {
+            logger.log("onMtuChanged mtu=$mtu status=$status")
+        }
     }
 
     private fun handleIncoming(bytes: ByteArray?) {
-        val frame = bytes?.let { BmsFrameParser.parse(it) } ?: return
+        if (bytes == null) {
+            logger.log("onCharacteristicChanged value=null")
+            return
+        }
+        val frame = BmsFrameParser.parse(bytes)
+        logger.logBytes(if (frame == null) "RX unparsed(size!=19)" else "RX ${frame::class.simpleName}", bytes)
+        if (frame == null) return
         _frames.tryEmit(frame)
         _state.update { BmsStateReducer.reduce(it, frame) }
     }
 
     /** Ініціює підключення. Прогрес відстежуйте через [connectionState]. */
     fun connect() {
+        logger.log("connect() device=${device.address} name=${device.name}")
         _connectionState.value = BmsConnectionState.CONNECTING
-        gatt = device.connectGatt(context, false, gattCallback)
+        // TRANSPORT_LE явно (а не TRANSPORT_AUTO за замовчуванням) — так само, як штатний
+        // застосунок. На деяких чипсетах/OEM-стеках TRANSPORT_AUTO підключається й підписує
+        // нотифікації без помилок, але BLE-нотифікації від периферії після цього не доходять.
+        gatt = device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
     }
 
     /**
@@ -142,11 +182,17 @@ class BmsConnection(
         @Suppress("DEPRECATION")
         characteristic.value = command
         @Suppress("DEPRECATION")
-        return g.writeCharacteristic(characteristic)
+        val accepted = g.writeCharacteristic(characteristic)
+        logger.logBytes("TX accepted=$accepted", command)
+        return accepted
     }
 
     /** Закриває GATT-з'єднання і звільняє ресурси. Після цього екземпляр непридатний для повторного [connect]. */
     fun close() {
+        logger.log("close()")
+        if (_connectionState.value == BmsConnectionState.READY) {
+            sendCommand(BmsCommands.exitRealtimeMonitoring())
+        }
         gatt?.disconnect()
         gatt?.close()
         gatt = null

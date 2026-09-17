@@ -22,3 +22,9 @@ local.properties
 .DS_Store
 Thumbs.db
 *.log
+
+# Claude Code local settings (personal, machine-specific permissions)
+.claude/settings.local.json
+
+# Downloaded/generated reverse-engineering tooling (apktool, decoded smali, signing key, rebuilt APKs)
+/tools/

@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p \"C:/Users/alexa/Projects/BMS/tools\" 2>/dev/null; echo ok)",
+      "Bash(mkdir -p tools/decode)",
+      "Bash(java -jar tools/apktool.jar d -f -o tools/decode/apk1 \"app/64db35e7d839d.apk\")",
+      "Bash(java -jar tools/apktool.jar d -f -o tools/decode/apk2 \"app/666815497d87b.apk\")",
+      "Bash(java -jar apktool.jar b -o build_apk1.apk decode/apk1)",
+      "Bash(java -jar apktool.jar b -o build_apk2.apk decode/apk2)",
+      "Bash(keytool -genkeypair -v -keystore debug.keystore -storepass android -keypass android -alias debugkey -dname \"CN=BMS Debug,O=BMS,C=UA\" -keyalg RSA -keysize 2048 -validity 10000)",
+      "Bash(cp \"C:/Users/alexa/Projects/BMS/tools/signed_apk1.apk\" \"C:/Users/alexa/AppData/Local/Temp/bms-apk-serve/xue18-patched1.apk\")",
+      "Bash(cp \"C:/Users/alexa/Projects/BMS/tools/signed_apk2.apk\" \"C:/Users/alexa/AppData/Local/Temp/bms-apk-serve/xue18-patched2.apk\")",
+      "Read(//c/Users/alexa/AppData/Local/Temp/bms-apk-serve/**)",
+      "Bash(curl -sI http://127.0.0.1/xue18-patched1.apk)",
+      "Bash(curl -sI http://127.0.0.1/xue18-patched2.apk)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\alexa\\Projects\\BMS"
+    ]
+  }
+}

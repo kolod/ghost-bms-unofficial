@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ua.ztr.bmsble.BmsConnectionState
 import ua.ztr.bmsmonitor.ui.BmsMonitorTheme
@@ -47,6 +48,17 @@ private fun hasBluetoothPermissions(context: Context): Boolean =
     requiredBluetoothPermissions().all {
         ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
     }
+
+private fun shareLogFile(context: Context, file: java.io.File) {
+    if (!file.exists()) return
+    val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_STREAM, uri)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    context.startActivity(Intent.createChooser(intent, "Поділитися логом BMS"))
+}
 
 class MainActivity : ComponentActivity() {
 
@@ -121,6 +133,8 @@ private fun AppRoot(viewModel: BmsViewModel) {
     val deviceName by viewModel.connectedDeviceName.collectAsStateWithLifecycle()
     val isScanning by viewModel.isScanning.collectAsStateWithLifecycle()
     val scanResults by viewModel.scanResults.collectAsStateWithLifecycle()
+    val logFile by viewModel.logFile.collectAsStateWithLifecycle()
+    val logLines by viewModel.logLines.collectAsStateWithLifecycle()
 
     Scaffold { padding ->
         if (connectionState == BmsConnectionState.DISCONNECTED && deviceName == null) {
@@ -136,9 +150,11 @@ private fun AppRoot(viewModel: BmsViewModel) {
                 deviceName = deviceName,
                 connectionState = connectionState,
                 state = bmsState,
+                logLines = logLines,
                 onScreenOn = { viewModel.setScreenOn(true) },
                 onScreenOff = { viewModel.setScreenOn(false) },
                 onDisconnect = { viewModel.disconnect() },
+                onShareLog = logFile?.let { file -> { shareLogFile(context, file) } },
                 modifier = Modifier.padding(padding),
             )
         }

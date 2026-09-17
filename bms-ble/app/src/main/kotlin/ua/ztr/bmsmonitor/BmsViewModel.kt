@@ -4,6 +4,7 @@ import android.app.Application
 import android.bluetooth.BluetoothDevice
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import java.io.File
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -44,6 +45,14 @@ class BmsViewModel(application: Application) : AndroidViewModel(application) {
     private val _connectedDeviceName = MutableStateFlow<String?>(null)
     val connectedDeviceName: StateFlow<String?> = _connectedDeviceName.asStateFlow()
 
+    private val _logFile = MutableStateFlow<File?>(null)
+    /** Файл поточної/останньої сесії діагностичного логу — для кнопки "Поділитися логом". */
+    val logFile: StateFlow<File?> = _logFile.asStateFlow()
+
+    private val _logLines = MutableStateFlow<List<String>>(emptyList())
+    /** Останні рядки діагностичного логу поточної сесії — для живого перегляду. */
+    val logLines: StateFlow<List<String>> = _logLines.asStateFlow()
+
     private var scanJob: Job? = null
     private var connection: BmsConnection? = null
 
@@ -73,9 +82,12 @@ class BmsViewModel(application: Application) : AndroidViewModel(application) {
 
         val newConnection = client.connect(target.device)
         connection = newConnection
+        _logFile.value = newConnection.logger.file
+        _logLines.value = emptyList()
 
         newConnection.connectionState.onEach { _connectionState.value = it }.launchIn(viewModelScope)
         newConnection.state.onEach { _bmsState.value = it }.launchIn(viewModelScope)
+        newConnection.logger.lines.onEach { _logLines.value = it }.launchIn(viewModelScope)
     }
 
     fun disconnect() {

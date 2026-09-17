@@ -1,13 +1,17 @@
 package ua.ztr.bmsmonitor.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
@@ -18,9 +22,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import ua.ztr.bmsble.BmsConnectionState
@@ -36,9 +46,11 @@ fun DashboardScreen(
     deviceName: String?,
     connectionState: BmsConnectionState,
     state: BmsState,
+    logLines: List<String> = emptyList(),
     onScreenOn: () -> Unit,
     onScreenOff: () -> Unit,
     onDisconnect: () -> Unit,
+    onShareLog: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize()) {
@@ -60,6 +72,13 @@ fun DashboardScreen(
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(onClick = onScreenOn) { Text("Екран увімк.") }
                         OutlinedButton(onClick = onScreenOff) { Text("Екран вимк.") }
+                    }
+                }
+            }
+            if (onShareLog != null) {
+                item {
+                    Section("Діагностика") {
+                        DiagnosticsPanel(logLines = logLines, onShareLog = onShareLog)
                     }
                 }
             }
@@ -100,6 +119,43 @@ private fun ConnectionBanner(deviceName: String?, state: BmsConnectionState, onD
         Button(onClick = onDisconnect) { Text("Відключити") }
     }
     HorizontalDivider()
+}
+
+@Composable
+private fun DiagnosticsPanel(logLines: List<String>, onShareLog: () -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Column {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = { expanded = !expanded }) {
+                Text(if (expanded) "Сховати лог" else "Лог у реальному часі (${logLines.size})")
+            }
+            OutlinedButton(onClick = onShareLog) { Text("Поділитися логом") }
+        }
+        if (expanded) {
+            val listState = rememberLazyListState()
+            LaunchedEffect(logLines.size) {
+                if (logLines.isNotEmpty()) listState.animateScrollToItem(logLines.size - 1)
+            }
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 280.dp)
+                    .padding(top = 8.dp)
+                    .background(Color.Black),
+            ) {
+                items(logLines) { line ->
+                    Text(
+                        line,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = Color(0xFF33FF33),
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable
