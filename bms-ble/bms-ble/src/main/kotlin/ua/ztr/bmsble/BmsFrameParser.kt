@@ -83,8 +83,15 @@ object BmsFrameParser {
         livePowerKw = u16(b, 17) / 10.0,
     )
 
+    /**
+     * ВИПРАВЛЕНО: offset 15-16, а не 13-14. Перевірено побайтово на реальному пристрої
+     * (416 кадрів у logs/bms_20260918_124228.txt) — offset 13-14 завжди `00 00`, а
+     * реальне значення (0x0064=100 → 10.0 Аг, що збігалось із показником на дашборді
+     * штатного застосунку) стабільно стоїть на offset 15-16. З попереднім (хибним)
+     * offset "Використана ємність" завжди показувала 0.00 Аг.
+     */
     private fun parseUsedCapacity(b: ByteArray): BmsFrame.UsedCapacity = BmsFrame.UsedCapacity(
-        usedCapacityAh = u16(b, 13) / 10.0,
+        usedCapacityAh = u16(b, 15) / 10.0,
     )
 
     private fun parseProtectionStatus(b: ByteArray): BmsFrame.ProtectionStatus {

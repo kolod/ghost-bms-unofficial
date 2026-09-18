@@ -50,6 +50,19 @@ class BmsFrameParserTest {
     }
 
     @Test
+    fun `page 8 used capacity reads offset 15-16, not 13-14`() {
+        // Регресія: реальний пристрій (416 кадрів у логу) завжди мав "00 00" на offset
+        // 13-14 і реальне значення на offset 15-16 — попередня реалізація читала
+        // невірний offset і "Використана ємність" завжди показувала 0.00 Аг.
+        val bytes = ByteArray(19)
+        bytes[0] = 8
+        putU16(bytes, 15, 100) // 10.0 Ah
+
+        val frame = BmsFrameParser.parse(bytes) as BmsFrame.UsedCapacity
+        assertEquals(10.0, frame.usedCapacityAh, 1e-9)
+    }
+
+    @Test
     fun `page 16 protection status and flags`() {
         val bytes = ByteArray(19)
         bytes[0] = 16
