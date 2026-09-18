@@ -44,7 +44,7 @@ fun CellVoltagesScreen(
     val cellCount = (state.cellCount ?: PROTOCOL_VOLTAGE_CELL_LIMIT).coerceIn(0, MAX_CELLS)
 
     LazyVerticalGrid(
-        columns = GridCells.Fixed(3),
+        columns = GridCells.Fixed(4),
         modifier = modifier.fillMaxSize().padding(horizontal = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -58,15 +58,21 @@ fun CellVoltagesScreen(
                 outOfProtocolRange = cellNumber > PROTOCOL_VOLTAGE_CELL_LIMIT,
             )
         }
-        state.moduleTemperaturesC?.let { temps ->
+        // Банк B (0x02+0x0A) — підтверджено, саме тут реальні дані з фізичних датчиків.
+        // Банк A (0x12, state.moduleTemperaturesC) на пристрої власника завжди нульовий,
+        // тож поки не показуємо — див. коментар полів у BmsState.kt.
+        if (state.auxModuleTemperaturesC.isNotEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }) {
-                Section("Температура модулів") {
-                    Column {
-                        temps.forEachIndexed { i, t ->
-                            MetricRow("Модуль ${i + 1}", "%.1f °C".format(t))
-                        }
-                    }
-                }
+                Text(
+                    "Температура модулів",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+            val temps = state.auxModuleTemperaturesC.toSortedMap()
+            items(temps.entries.toList()) { (probe, celsius) ->
+                TemperatureTile(probeNumber = probe, celsius = celsius)
             }
         }
     }
@@ -91,6 +97,23 @@ private fun CellVoltageTile(cellNumber: Int, voltage: Double?, outOfProtocolRang
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = color,
+            )
+        }
+    }
+}
+
+@Composable
+private fun TemperatureTile(probeNumber: Int, celsius: Double) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(8.dp).fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text("Модуль $probeNumber", style = MaterialTheme.typography.labelSmall)
+            Text(
+                "%.1f °C".format(celsius),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
             )
         }
     }

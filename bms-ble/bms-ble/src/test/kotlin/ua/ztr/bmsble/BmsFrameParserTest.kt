@@ -57,8 +57,11 @@ class BmsFrameParserTest {
         putU16(bytes, 3, 4400)  // dischargeRecoveryVoltage
         putU16(bytes, 5, 1)     // defaultChannelOn = true
         putU16(bytes, 7, 3)     // protectionCode = OVER_CHARGE
+        putU16(bytes, 9, 0b10)  // chargeMosOn = true, dischargeMosOn = false
         putU16(bytes, 11, 1)    // screenOff = true
-        bytes[18] = (0x40 or 0x20).toByte() // charging + balancing
+        putU16(bytes, 15, 350)  // mosTemperature magnitude = 35.0 C
+        bytes[17] = 1           // mosTemperature negative
+        bytes[18] = (0x80 or 0x40 or 0x20).toByte() // channelOpen + charging + balancing
 
         val frame = BmsFrameParser.parse(bytes) as BmsFrame.ProtectionStatus
         assertEquals(52.00, frame.chargeRecoveryVoltage, 1e-9)
@@ -66,6 +69,10 @@ class BmsFrameParserTest {
         assertTrue(frame.defaultChannelOn)
         assertEquals(ProtectionCode.OVER_CHARGE, frame.protectionCode)
         assertTrue(frame.screenOff)
+        assertTrue(frame.chargeMosOn)
+        assertTrue(!frame.dischargeMosOn)
+        assertEquals(-35.0, frame.mosTemperatureC, 1e-9)
+        assertTrue(frame.status.channelOpen)
         assertTrue(frame.status.isCharging)
         assertTrue(frame.status.isBalancing)
         assertTrue(!frame.status.alarmLowVoltage)
@@ -136,6 +143,38 @@ class BmsFrameParserTest {
     }
 
     @Test
+    fun `page 2 and page 10 are a separate module-temperature bank (probes 1-8)`() {
+        val page2 = ByteArray(19).also {
+            it[0] = 2
+            it[2] = 0b10001000.toByte() // bit7 (probe1) and bit3 (probe3) negative
+            putU16(it, 3, 199)  // probe1 magnitude 19.9 -> -19.9
+            putU16(it, 7, 199)  // probe2 = 19.9
+            putU16(it, 11, 198) // probe3 magnitude 19.8 -> -19.8
+            putU16(it, 15, 201) // probe4 = 20.1
+        }
+        val page10 = ByteArray(19).also {
+            it[0] = 10
+            putU16(it, 3, 210)  // probe5
+            putU16(it, 7, 211)  // probe6
+            putU16(it, 11, 212) // probe7
+            putU16(it, 15, 213) // probe8
+        }
+
+        val frame2 = BmsFrameParser.parse(page2) as BmsFrame.AuxModuleTemperatures
+        assertEquals(mapOf(1 to -19.9, 2 to 19.9, 3 to -19.8, 4 to 20.1), frame2.probes)
+
+        val frame10 = BmsFrameParser.parse(page10) as BmsFrame.AuxModuleTemperatures
+        assertEquals(mapOf(5 to 21.0, 6 to 21.1, 7 to 21.2, 8 to 21.3), frame10.probes)
+
+        var state = BmsState()
+        state = BmsStateReducer.reduce(state, frame2, now = 1L)
+        state = BmsStateReducer.reduce(state, frame10, now = 2L)
+        assertEquals(8, state.auxModuleTemperaturesC.size)
+        assertEquals(-19.9, state.auxModuleTemperaturesC[1]!!, 1e-9)
+        assertEquals(21.3, state.auxModuleTemperaturesC[8]!!, 1e-9)
+    }
+
+    @Test
     fun `regular cell voltage page maps offsets to sequential cell numbers`() {
         val bytes = ByteArray(19)
         bytes[0] = 20 // cells 10-18
@@ -179,6 +218,40 @@ class BmsFrameParserTest {
     }
 
     @Test
+    fun `page 3-7 and 11-15 are a duplicate cell-voltage numbering (C2 window)`() {
+        val page3 = ByteArray(19).also { it[0] = 3; putU16(it, 1, 3400) } // cell 1
+        val page11 = ByteArray(19).also { it[0] = 11; putU16(it, 1, 3450) } // cell 49
+
+        val frame3 = BmsFrameParser.parse(page3) as BmsFrame.CellVoltages
+        assertEquals(9, frame3.cells.size)
+        assertEquals(3.400, frame3.cells[1]!!, 1e-9)
+
+        val frame11 = BmsFrameParser.parse(page11) as BmsFrame.CellVoltages
+        assertEquals(3.450, frame11.cells[49]!!, 1e-9)
+    }
+
+    @Test
+    fun `a zero reading from the duplicate page numbering does not clobber a real value`() {
+        // Той самий сценарій, що спричиняв "блимання" на реальному пристрої: сторінка
+        // 3 (жива схема) дає реальну напругу комірки 1, а сторінка 19 (той самий номер
+        // комірки, нежива схема на конкретному пристрої) шле нуль — нуль не повинен
+        // затерти вже відоме реальне значення.
+        val page3Real = ByteArray(19).also { it[0] = 3; putU16(it, 1, 3400) }
+        val page19Zero = ByteArray(19).also { it[0] = 19 } // усі нулі
+
+        var state = BmsState()
+        state = BmsStateReducer.reduce(state, BmsFrameParser.parse(page3Real)!!, now = 1L)
+        assertEquals(3.400, state.cellVoltages[1]!!, 1e-9)
+
+        state = BmsStateReducer.reduce(state, BmsFrameParser.parse(page19Zero)!!, now = 2L)
+        assertEquals(3.400, state.cellVoltages[1]!!, 1e-9) // не затерто нулем
+
+        // Але для комірки, про яку ще нема даних, нуль все одно записується
+        // (щоб відрізняти "відомо, що відсутня" від "ще нема даних" — обидва "—" в UI).
+        assertEquals(0.0, state.cellVoltages[2]!!, 1e-9)
+    }
+
+    @Test
     fun `state reducer computes cumulative cycles from rated capacity`() {
         val basicInfoBytes = ByteArray(19)
         basicInfoBytes[0] = 1
@@ -215,8 +288,8 @@ class BmsFrameParserTest {
 
     @Test
     fun `channel and balance commands use confirmed 1-byte convention`() {
-        assertArrayEqualsHex("070002fffd", BmsCommands.setChannel(open = true))
-        assertArrayEqualsHex("070001fffe", BmsCommands.setChannel(open = false))
+        assertArrayEqualsHex("070002fffd", BmsCommands.setBatteryEnabled(enabled = true))
+        assertArrayEqualsHex("070001fffe", BmsCommands.setBatteryEnabled(enabled = false))
         assertArrayEqualsHex("080002fffd", BmsCommands.setAutoBalance(on = true))
         assertArrayEqualsHex("080001fffe", BmsCommands.setAutoBalance(on = false))
     }

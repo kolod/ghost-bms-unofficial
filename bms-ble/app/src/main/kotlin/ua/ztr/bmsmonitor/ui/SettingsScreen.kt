@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -24,7 +25,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import java.util.Locale
 import ua.ztr.bmsble.BmsState
 
 /**
@@ -294,8 +297,15 @@ private fun SettingEditDialog(
     onDismiss: () -> Unit,
     onSubmit: (Double) -> Unit,
 ) {
-    var text by remember { mutableStateOf(initialValue?.let { "%.${decimals}f".format(it) } ?: "") }
-    val parsed = text.toDoubleOrNull()
+    // Locale.ROOT — щоб десятковим роздільником завжди була крапка (лишень такий
+    // формат приймає toDoubleOrNull() нижче; на пристроях з укр. локаллю
+    // String.format без Locale підставляв кому, і поле одразу ставало невалідним).
+    var text by remember {
+        mutableStateOf(initialValue?.let { String.format(Locale.ROOT, "%.${decimals}f", it) } ?: "")
+    }
+    // Кому теж приймаємо — деякі клавіатури вставляють її як десятковий роздільник
+    // навіть у режимі Decimal, залежно від мовної розкладки.
+    val parsed = text.replace(',', '.').toDoubleOrNull()
     val valid = parsed != null && parsed in min..max
 
     AlertDialog(
@@ -317,6 +327,9 @@ private fun SettingEditDialog(
                     label = { Text(if (unit.isBlank()) "значення" else unit) },
                     isError = !valid && text.isNotEmpty(),
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = if (decimals == 0) KeyboardType.Number else KeyboardType.Decimal,
+                    ),
                 )
                 Text(
                     "Межі: $min–$max ${unit.ifBlank { "" }}".trim(),

@@ -228,7 +228,7 @@ private fun AppRoot(viewModel: BmsViewModel) {
                     logLines = logLines,
                     onScreenOn = { viewModel.setScreenOn(true) },
                     onScreenOff = { viewModel.setScreenOn(false) },
-                    onChannelOpen = { viewModel.setChannel(it) },
+                    onBatteryEnabledChange = { viewModel.setBatteryEnabled(it) },
                     onAutoBalance = { viewModel.setAutoBalance(it) },
                     onDisconnect = { viewModel.disconnect() },
                     onShareLog = logFile?.let { file -> { shareLogFile(context, file) } },

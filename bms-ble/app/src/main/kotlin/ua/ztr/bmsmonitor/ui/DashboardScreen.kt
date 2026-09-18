@@ -21,6 +21,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -50,7 +51,7 @@ fun DashboardScreen(
     logLines: List<String> = emptyList(),
     onScreenOn: () -> Unit,
     onScreenOff: () -> Unit,
-    onChannelOpen: (Boolean) -> Unit,
+    onBatteryEnabledChange: (Boolean) -> Unit,
     onAutoBalance: (Boolean) -> Unit,
     onDisconnect: () -> Unit,
     onShareLog: (() -> Unit)? = null,
@@ -73,19 +74,22 @@ fun DashboardScreen(
             }
             item {
                 Section("Керування") {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedButton(onClick = onScreenOn) { Text("Екран увімк.") }
-                            OutlinedButton(onClick = onScreenOff) { Text("Екран вимк.") }
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedButton(onClick = { onChannelOpen(true) }) { Text("Канал відкрити") }
-                            OutlinedButton(onClick = { onChannelOpen(false) }) { Text("Канал закрити") }
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedButton(onClick = { onAutoBalance(true) }) { Text("Баланс увімк.") }
-                            OutlinedButton(onClick = { onAutoBalance(false) }) { Text("Баланс вимк.") }
-                        }
+                    Column {
+                        SwitchRow(
+                            label = "Батарея підключена",
+                            checked = state.status?.channelOpen,
+                            onCheckedChange = onBatteryEnabledChange,
+                        )
+                        SwitchRow(
+                            label = "Балансування",
+                            checked = state.status?.isBalancing,
+                            onCheckedChange = onAutoBalance,
+                        )
+                        SwitchRow(
+                            label = "Екран",
+                            checked = state.screenOff?.let { !it },
+                            onCheckedChange = { on -> if (on) onScreenOn() else onScreenOff() },
+                        )
                     }
                 }
             }
@@ -198,6 +202,22 @@ internal fun MetricRow(label: String, value: String) {
     }
 }
 
+/**
+ * Рядок керування перемикачем. [checked] — живий стан з пристрою (`null`, доки не прийшов
+ * перший кадр — тоді перемикач показує "вимкнено" за замовчуванням, але це не підтверджений факт).
+ */
+@Composable
+private fun SwitchRow(label: String, checked: Boolean?, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyMedium)
+        Switch(checked = checked ?: false, onCheckedChange = onCheckedChange)
+    }
+}
+
 /** Сторінка 1, offset 13-18 — жива напруга/струм/потужність батареї. Підтверджено на пристрої. */
 @Composable
 private fun LiveReadingsCard(state: BmsState) {
@@ -236,6 +256,7 @@ private fun StatusCard(state: BmsState) {
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(bottom = 8.dp)) {
             if (status.isCharging) StatusChip("Заряджається", ColorOk)
             if (status.isBalancing) StatusChip("Балансування", ColorOk)
+            if (status.channelOpen) StatusChip("Коло увімкнено", ColorOk)
         }
         val alarms = buildList {
             if (status.alarmLowVoltage) add("Напруга нижче порогу")
@@ -254,7 +275,10 @@ private fun StatusCard(state: BmsState) {
     if ((state.triggeringCellNumber ?: 0) > 0) {
         MetricRow("Комірка, що спричинила захист", "№${state.triggeringCellNumber}")
     }
-    MetricRow("Канал за замовчуванням", boolLabel(state.defaultChannelOn, "увімк.", "вимк."))
+    MetricRow("Реле заряду", boolLabel(state.chargeMosOn, "увімк.", "вимк."))
+    MetricRow("Реле розряду", boolLabel(state.dischargeMosOn, "увімк.", "вимк."))
+    MetricRow("Температура реле (MOSFET)", fmt(state.mosTemperatureC, "°C"))
+    MetricRow("Батарея увімкнена за замовчуванням", boolLabel(state.defaultChannelOn, "увімк.", "вимк."))
     MetricRow("Екран", boolLabel(state.screenOff, "вимкнено", "увімкнено"))
     MetricRow("Напруга відновлення заряду", fmt(state.chargeRecoveryVoltage, "В"))
     MetricRow("Напруга відновлення розряду", fmt(state.dischargeRecoveryVoltage, "В"))

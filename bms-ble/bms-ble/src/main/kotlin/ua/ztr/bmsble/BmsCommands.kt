@@ -10,8 +10,8 @@ import kotlin.math.roundToInt
  *
  * Підтверджено на реальному пристрої (1-байтний параметр, `hi(параметр)` завжди 0x00):
  * команда екрана (0x0D), вхід/вихід з екрана реального часу (0x10, обов'язковий —
- * без нього BMS не починає штовхати нотифікації з даними), канал заряду/розряду
- * (0x07) і автобалансування (0x08).
+ * без нього BMS не починає штовхати нотифікації з даними), увімкнення/вимкнення
+ * батареї (0x07) і автобалансування (0x08).
  *
  * Команди з 2-байтним параметром спочатку були **гіпотезою** (той самий принцип
  * checksum, екстрапольований з 1-байтного випадку, без HCI snoop-підтвердження).
@@ -41,8 +41,13 @@ object BmsCommands {
     /** Штатний застосунок шле це перед виходом з екрана показників / розривом з'єднання. */
     fun exitRealtimeMonitoring(): ByteArray = simpleCommand(CMD_REALTIME, PARAM_REALTIME_EXIT)
 
-    /** Канал заряду/розряду (MOSFET) — відкрито чи закрито. Підтверджено (1-байтний параметр). */
-    fun setChannel(open: Boolean): ByteArray = simpleCommand(0x07, if (open) 2 else 1)
+    /**
+     * Увімкнути/вимкнути батарею (силове коло) — НЕ окремо заряд чи розряд: якщо напруга
+     * батареї в допустимому діапазоні, BMS сама вмикає потрібні реле (заряду і/або розряду).
+     * Підтверджено (1-байтний параметр). Раніше називалась "канал" — назва зі штатного
+     * застосунку ("通道", channel) вводила в оману щодо реального призначення.
+     */
+    fun setBatteryEnabled(enabled: Boolean): ByteArray = simpleCommand(0x07, if (enabled) 2 else 1)
 
     /** Автоматичне балансування комірок. Підтверджено (1-байтний параметр). */
     fun setAutoBalance(on: Boolean): ByteArray = simpleCommand(0x08, if (on) 2 else 1)
@@ -86,7 +91,7 @@ object BmsCommands {
     fun dischargeRecoveryVoltage(volts: Double): ByteArray = settingCommand(0x0B, (volts * 100).roundToInt())
 
     /**
-     * Стан каналу за замовчуванням. Увага: конвенція on/off тут ІНША, ніж у [setChannel]/
+     * Стан каналу за замовчуванням. Увага: конвенція on/off тут ІНША, ніж у [setBatteryEnabled]/
      * [setAutoBalance] (тут 1=on/2=off, там 2=on/1=off) — не уніфікувати помилково.
      * Readout: [BmsState.defaultChannelOn] (сторінка 16).
      */
@@ -105,7 +110,7 @@ object BmsCommands {
     fun usedCapacityAh(ah: Int): ByteArray = settingCommand(0x14, ah)
 
     /**
-     * Увага: конвенція on/off тут ІНША, ніж у [setChannel]/[setAutoBalance] (тут 1=on/2=off).
+     * Увага: конвенція on/off тут ІНША, ніж у [setBatteryEnabled]/[setAutoBalance] (тут 1=on/2=off).
      * Readout: `BmsSettings.autoResetCapacity` (сторінка 31).
      */
     fun autoResetCapacity(on: Boolean): ByteArray = settingCommand(0x15, if (on) 1 else 2)

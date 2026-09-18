@@ -152,7 +152,7 @@ class BmsViewModel(application: Application) : AndroidViewModel(application) {
         connection?.sendCommand(command)
     }
 
-    fun setChannel(open: Boolean) = send(BmsCommands.setChannel(open))
+    fun setBatteryEnabled(enabled: Boolean) = send(BmsCommands.setBatteryEnabled(enabled))
     fun setAutoBalance(on: Boolean) = send(BmsCommands.setAutoBalance(on))
     fun clearAction9() = send(BmsCommands.clearAction9())
     fun resetDischargeCapacity() = send(BmsCommands.resetDischargeCapacity())

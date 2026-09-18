@@ -30,6 +30,11 @@ data class BmsState(
     val defaultChannelOn: Boolean? = null,
     val protectionCode: ProtectionCode? = null,
     val screenOff: Boolean? = null,
+    /** Живий стан реле розряду (MOSFET). Підтверджено в C2.java ("放电mos"). */
+    val dischargeMosOn: Boolean? = null,
+    /** Живий стан реле заряду (MOSFET). Підтверджено в C2.java ("充电mos"). */
+    val chargeMosOn: Boolean? = null,
+    val mosTemperatureC: Double? = null,
     val status: BmsStatusFlags? = null,
     val balanceStartVoltage: Double? = null,
     val minCellVoltage: Double? = null,
@@ -45,7 +50,19 @@ data class BmsState(
     val settings: BmsSettings? = null,
     /** Напруги окремих комірок (номер 1-based → вольти). Комірки 97-192 протоколом не передаються. */
     val cellVoltages: Map<Int, Double> = emptyMap(),
-    val moduleTemperaturesC: List<Double>? = null,
+    /**
+     * Температури модулів, банк A — page 0x12 (номер 1-based → °C, усі 8 одразу).
+     * На реальному пристрої власника стабільно нульовий (сенсори цього банку не
+     * підключені) — лишається окремим полем (НЕ зливається з [auxModuleTemperaturesC]),
+     * бо злиття в одну мапу спричиняло "блимання" між нулями цього банку й реальними
+     * значеннями іншого щоцикл.
+     */
+    val moduleTemperaturesC: Map<Int, Double> = emptyMap(),
+    /**
+     * Температури модулів, банк B — pages 0x02 (модулі 1-4) + 0x0A (модулі 5-8).
+     * Підтверджено власником пристрою — саме тут реальні дані з фізичних датчиків.
+     */
+    val auxModuleTemperaturesC: Map<Int, Double> = emptyMap(),
     val lastUpdated: Long = 0L,
 ) {
     val cellVoltageDiff: Double?
@@ -81,6 +98,9 @@ object BmsStateReducer {
                 defaultChannelOn = frame.defaultChannelOn,
                 protectionCode = frame.protectionCode,
                 screenOff = frame.screenOff,
+                dischargeMosOn = frame.dischargeMosOn,
+                chargeMosOn = frame.chargeMosOn,
+                mosTemperatureC = frame.mosTemperatureC,
                 status = frame.status,
                 lastUpdated = now,
             )
@@ -103,7 +123,7 @@ object BmsStateReducer {
 
             is BmsFrame.ProtectionTriggerCell -> current.copy(
                 triggeringCellNumber = frame.cellNumber,
-                cellVoltages = current.cellVoltages + frame.remainderCells,
+                cellVoltages = current.cellVoltages.mergeNonZero(frame.remainderCells),
                 lastUpdated = now,
             )
 
@@ -113,15 +133,38 @@ object BmsStateReducer {
             )
 
             is BmsFrame.ModuleTemperatures -> current.copy(
-                moduleTemperaturesC = frame.probesC,
+                moduleTemperaturesC = current.moduleTemperaturesC +
+                    frame.probesC.mapIndexed { i, v -> (i + 1) to v },
+                lastUpdated = now,
+            )
+
+            is BmsFrame.AuxModuleTemperatures -> current.copy(
+                auxModuleTemperaturesC = current.auxModuleTemperaturesC + frame.probes,
                 lastUpdated = now,
             )
 
             is BmsFrame.CellVoltages -> current.copy(
-                cellVoltages = current.cellVoltages + frame.cells,
+                cellVoltages = current.cellVoltages.mergeNonZero(frame.cells),
                 lastUpdated = now,
             )
 
             is BmsFrame.Unknown -> current
         }
+
+    /**
+     * Зливає нові показники з [updates], але НЕ дає нулю затерти вже відоме реальне
+     * (ненульове) значення. Потрібно тому, що штатний застосунок дублює напруги комірок
+     * під двома різними pageType-схемами (нумерація вікон C2 і C4) — на конкретному
+     * пристрої "живою" виявляється лише одна з них, а друга щоцикл шле нулі; без цього
+     * фільтра дані в UI "блимають" між реальним значенням і нулем щоразу, як приходить
+     * кадр із неробочої схеми.
+     */
+    private fun Map<Int, Double>.mergeNonZero(updates: Map<Int, Double>): Map<Int, Double> {
+        if (updates.isEmpty()) return this
+        val result = toMutableMap()
+        for ((key, value) in updates) {
+            if (value != 0.0 || key !in result) result[key] = value
+        }
+        return result
+    }
 }

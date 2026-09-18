@@ -50,9 +50,16 @@ sealed class BmsFrame {
     data class ProtectionStatus(
         val chargeRecoveryVoltage: Double,
         val dischargeRecoveryVoltage: Double,
+        /** Налаштований стан каналу за замовчуванням (readout команди 0x0C) — НЕ живий стан реле. */
         val defaultChannelOn: Boolean,
         val protectionCode: ProtectionCode,
         val screenOff: Boolean,
+        /** Живий стан реле розряду (MOSFET), offset 9-10 біт 0. Підтверджено в C2.java ("放电mos"). */
+        val dischargeMosOn: Boolean,
+        /** Живий стан реле заряду (MOSFET), offset 9-10 біт 1. Підтверджено в C2.java ("充电mos"). */
+        val chargeMosOn: Boolean,
+        /** Температура MOSFET, °C (зі знаком, offset 17 — 1=від'ємне). Offset 15-16. */
+        val mosTemperatureC: Double,
         val status: BmsStatusFlags,
     ) : BmsFrame()
 
@@ -90,6 +97,26 @@ sealed class BmsFrame {
     /** page 0x12 (18) — температури 8 датчиків модулів, °C (зі знаком). */
     data class ModuleTemperatures(
         val probesC: List<Double>,
+    ) : BmsFrame()
+
+    /**
+     * pages 0x02 і 0x0A (10) — ще один, ОКРЕМИЙ набір температур модулів (номер
+     * датчика 1-based → °C), знайдений в `C2.java`. НЕ дублює [ModuleTemperatures]
+     * (page 0x12) — на реальному пристрої дає інші, реальні значення, тоді як
+     * page 0x12 повертала самі нулі (датчики цього банку фізично не підключені).
+     *
+     * Підтверджено (реально є на пристрої): по 4 датчики з кожної сторінки —
+     * `startProbe`=1..4 (0x02) і 5..8 (0x0A).
+     *
+     * TODO: BMS підтримує до 16 датчиків. Байтова структура кадру ідентична
+     * сторінці 0x12 (8 послідовних пар замість 4) — можливо, обидві сторінки
+     * насправді несуть по 8 датчиків кожна (0x02→1-8, 0x0A→9-16, разом усі 16),
+     * а штатний застосунок сам показує лише половину. Не реалізовано й не
+     * перевірено — немає датчиків для цих слотів на реальному пристрої.
+     * Деталі й точні offset-и — див. `BmsFrameParser.parseAuxModuleTemperatures`.
+     */
+    data class AuxModuleTemperatures(
+        val probes: Map<Int, Double>,
     ) : BmsFrame()
 
     /**

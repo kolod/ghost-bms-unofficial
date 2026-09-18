@@ -25,7 +25,7 @@ internal object DemoBmsData {
         }
         val simulatedLoadCurrent = 3.0 * sin(phase * 0.5)
         val simulatedVoltage = cellVoltages.values.sum().round(2)
-        val moduleTemps = (1..8).map { (24.0 + 2.0 * sin(phase * 0.3 + it)).round(1) }
+        val moduleTemps = (1..8).associateWith { (24.0 + 2.0 * sin(phase * 0.3 + it)).round(1) }
 
         return BmsState(
             // Сторінка 1, offset 13-18 — гіпотеза на живу телеметрію (перевіряється на дашборді).
@@ -45,7 +45,11 @@ internal object DemoBmsData {
             defaultChannelOn = true,
             protectionCode = ProtectionCode.NONE,
             screenOff = false,
+            chargeMosOn = simulatedLoadCurrent > 0,
+            dischargeMosOn = simulatedLoadCurrent <= 0,
+            mosTemperatureC = (28.0 + 3.0 * sin(phase * 0.25)).round(1),
             status = BmsStatusFlags(
+                channelOpen = true,
                 isCharging = simulatedLoadCurrent > 0,
                 isBalancing = tick % 20 < 5,
                 alarmLowVoltage = false,
@@ -75,7 +79,7 @@ internal object DemoBmsData {
                 canReceiveId = 101,
             ),
             cellVoltages = cellVoltages,
-            moduleTemperaturesC = moduleTemps,
+            auxModuleTemperaturesC = moduleTemps,
             lastUpdated = System.currentTimeMillis(),
         )
     }
