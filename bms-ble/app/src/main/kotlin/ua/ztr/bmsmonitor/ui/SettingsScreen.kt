@@ -88,12 +88,12 @@ fun SettingsScreen(
 
             item {
                 Section("Напруги") {
-                    EditableSettingRow("Напруга відсічки розряду", "В", null, 2, 0.01, 5.00, true) {
-                        onDischargeCutoffVoltage(it)
-                    }
-                    EditableSettingRow("Напруга відсічки заряду", "В", null, 2, 0.01, 5.00, true) {
-                        onChargeCutoffVoltage(it)
-                    }
+                    EditableSettingRow(
+                        "Напруга відсічки розряду", "В", state.dischargeCutoffVoltagePerCell, 2, 0.01, 5.00, false,
+                    ) { onDischargeCutoffVoltage(it) }
+                    EditableSettingRow(
+                        "Напруга відсічки заряду", "В", state.chargeCutoffVoltagePerCell, 2, 0.01, 5.00, false,
+                    ) { onChargeCutoffVoltage(it) }
                     EditableSettingRow(
                         "Напруга відновлення заряду", "В", state.chargeRecoveryVoltage, 2, 0.01, 5.00, true,
                     ) { onChargeRecoveryVoltage(it) }
@@ -114,12 +114,12 @@ fun SettingsScreen(
 
             item {
                 Section("Струм і температура") {
-                    EditableSettingRow("Струм захисту розряду", "А", null, 1, 0.0, 999.9, true) {
-                        onDischargeProtectionCurrent(it)
-                    }
-                    EditableSettingRow("Захист від перегріву", "°C", null, 1, 0.0, 150.0, true) {
-                        onHighTemperatureProtection(it)
-                    }
+                    EditableSettingRow(
+                        "Номінальний струм реле", "А", state.dischargeProtectionCurrent, 1, 0.0, 999.9, false,
+                    ) { onDischargeProtectionCurrent(it) }
+                    EditableSettingRow(
+                        "Захист від перегріву", "°C", state.highTemperatureProtectionThreshold, 1, 0.0, 150.0, false,
+                    ) { onHighTemperatureProtection(it) }
                     EditableSettingRow(
                         "Захист від низької температури", "°C", settings?.lowTemperatureThreshold?.toDouble(),
                         0, 0.0, 100.0, true,
@@ -137,12 +137,12 @@ fun SettingsScreen(
 
             item {
                 Section("Ємність і комірки") {
-                    EditableSettingRow("Максимальна ємність", "Аг", null, 1, 0.0, 6500.0, true) {
-                        onMaxBatteryCapacityAh(it)
-                    }
-                    EditableSettingRow("Кількість комірок", "шт", null, 0, 0.0, 192.0, true) {
-                        onTotalCellCount(it.toInt())
-                    }
+                    EditableSettingRow(
+                        "Максимальна ємність", "Аг", state.maxBatteryCapacityAh, 1, 0.0, 6500.0, false,
+                    ) { onMaxBatteryCapacityAh(it) }
+                    EditableSettingRow(
+                        "Кількість комірок", "шт", state.cellCount?.toDouble(), 0, 0.0, 192.0, true,
+                    ) { onTotalCellCount(it.toInt()) }
                     EditableSettingRow(
                         "Використана ємність", "Аг", state.usedCapacityAh, 0, 0.0, 6500.0, true,
                     ) { onUsedCapacityAh(it.toInt()) }

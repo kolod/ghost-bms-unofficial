@@ -7,24 +7,38 @@ package ua.ztr.bmsble
  */
 sealed class BmsFrame {
 
-    /** page 0x01 — основні показники. */
+    /**
+     * page 0x01 — суміш "відлуння" уставок захисту (offset 1-12, підтверджено власником
+     * пристрою — це НЕ жива телеметрія) і живих показників батареї (offset 13-18,
+     * підтверджено окремо). Offset 1-12: кожне поле — readout відповідної команди запису
+     * з [BmsCommands] (offset у порядку зростання точно відповідає порядку команд 0x01-0x06).
+     */
     data class BasicInfo(
-        val totalVoltage: Double,
-        /** Знак/напрям (заряд/розряд) не підтверджено — парситься як unsigned. */
-        val current: Double,
-        val ratedCapacityAh: Double,
-        val cellCount: Int,
-        val unknownVoltage: Double,
-        /** Від'ємні значення не підтверджені — парситься як unsigned. */
-        val temperatureC: Double,
+        /** Readout команди 0x01 ([BmsCommands.dischargeCutoffVoltage]) — В/комірку. */
+        val dischargeCutoffVoltagePerCell: Double,
         /**
-         * Offsets 13-18 — друга трійка напруга/струм/потужність, знайдена в `C4.java`.
-         * Точний стосунок до [totalVoltage]/[current] (те саме джерело чи інший вимір —
-         * напр. навантаження проти акумулятора) не підтверджено.
+         * Readout команди 0x02 ([BmsCommands.dischargeProtectionCurrent]) — номінальний
+         * струм реле/MOSFET, що комутують батарею (А), а не поточний струм навантаження.
          */
-        val secondaryVoltage: Double,
-        val secondaryCurrent: Double,
-        val powerKw: Double,
+        val dischargeProtectionCurrent: Double,
+        /** Readout команди 0x03 ([BmsCommands.maxBatteryCapacityAh]) — Аг. */
+        val maxBatteryCapacityAh: Double,
+        /** Readout команди 0x04 ([BmsCommands.totalCellCount]) — налаштована кількість комірок. */
+        val cellCount: Int,
+        /** Readout команди 0x05 ([BmsCommands.chargeCutoffVoltage]) — В/комірку. */
+        val chargeCutoffVoltagePerCell: Double,
+        /**
+         * Readout команди 0x06 ([BmsCommands.highTemperatureProtection]) — уставка макс.
+         * температури; власник пристрою вважає, що, ймовірно, стосується температури
+         * балансувальних модулів, але це не підтверджено остаточно.
+         */
+        val highTemperatureProtectionThreshold: Double,
+        /** Offset 13-14 — ПІДТВЕРДЖЕНО на пристрої: жива напруга батареї, В. */
+        val liveVoltage: Double,
+        /** Offset 15-16 — ПІДТВЕРДЖЕНО на пристрої: живий струм батареї, А. */
+        val liveCurrent: Double,
+        /** Offset 17-18 — жива потужність батареї, кВт. */
+        val livePowerKw: Double,
     ) : BmsFrame()
 
     /** page 0x08 — використана ємність. */

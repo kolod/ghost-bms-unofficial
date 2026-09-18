@@ -44,15 +44,15 @@ object BmsFrameParser {
     }
 
     private fun parseBasicInfo(b: ByteArray): BmsFrame.BasicInfo = BmsFrame.BasicInfo(
-        totalVoltage = u16(b, 1) / 100.0,
-        current = u16(b, 3) / 10.0,
-        ratedCapacityAh = u16(b, 5) / 10.0,
+        dischargeCutoffVoltagePerCell = u16(b, 1) / 100.0,
+        dischargeProtectionCurrent = u16(b, 3) / 10.0,
+        maxBatteryCapacityAh = u16(b, 5) / 10.0,
         cellCount = u16(b, 7),
-        unknownVoltage = u16(b, 9) / 100.0,
-        temperatureC = u16(b, 11) / 10.0,
-        secondaryVoltage = u16(b, 13) / 10.0,
-        secondaryCurrent = u16(b, 15) / 10.0,
-        powerKw = u16(b, 17) / 10.0,
+        chargeCutoffVoltagePerCell = u16(b, 9) / 100.0,
+        highTemperatureProtectionThreshold = u16(b, 11) / 10.0,
+        liveVoltage = u16(b, 13) / 10.0,
+        liveCurrent = u16(b, 15) / 10.0,
+        livePowerKw = u16(b, 17) / 10.0,
     )
 
     private fun parseUsedCapacity(b: ByteArray): BmsFrame.UsedCapacity = BmsFrame.UsedCapacity(

@@ -23,15 +23,22 @@ internal object DemoBmsData {
         val cellVoltages = (1..CELL_COUNT).associateWith { i ->
             (BASE_CELL_VOLTAGE + 0.03 * sin(phase + i * 0.4) + (i % 4) * 0.004).round(3)
         }
-        val current = (3.0 * sin(phase * 0.5)).round(1)
+        val simulatedLoadCurrent = 3.0 * sin(phase * 0.5)
+        val simulatedVoltage = cellVoltages.values.sum().round(2)
         val moduleTemps = (1..8).map { (24.0 + 2.0 * sin(phase * 0.3 + it)).round(1) }
 
         return BmsState(
-            totalVoltage = cellVoltages.values.sum().round(2),
-            current = current,
-            ratedCapacityAh = 100.0,
+            // Сторінка 1, offset 13-18 — гіпотеза на живу телеметрію (перевіряється на дашборді).
+            liveVoltage = simulatedVoltage,
+            liveCurrent = simulatedLoadCurrent.round(1),
+            livePowerKw = (simulatedVoltage * simulatedLoadCurrent / 1000.0).round(2),
+            // Сторінка 1, offset 1-12 — уставки захисту (НЕ жива телеметрія), статичні правдоподібні значення.
+            dischargeCutoffVoltagePerCell = 2.50,
+            dischargeProtectionCurrent = 120.0,
+            maxBatteryCapacityAh = 100.0,
             cellCount = CELL_COUNT,
-            temperatureC = (25.0 + sin(phase * 0.2)).round(1),
+            chargeCutoffVoltagePerCell = 3.65,
+            highTemperatureProtectionThreshold = 60.0,
             usedCapacityAh = (12.0 + tick * 0.01).round(2),
             chargeRecoveryVoltage = 3.60,
             dischargeRecoveryVoltage = 2.90,
@@ -39,7 +46,7 @@ internal object DemoBmsData {
             protectionCode = ProtectionCode.NONE,
             screenOff = false,
             status = BmsStatusFlags(
-                isCharging = current > 0,
+                isCharging = simulatedLoadCurrent > 0,
                 isBalancing = tick % 20 < 5,
                 alarmLowVoltage = false,
                 alarmOverCurrent = false,

@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.Flow
  * val connection = client.connect(device)
  * launch {
  *     connection.state.collect { state ->
- *         println("Напруга: ${state.totalVoltage} В, SOC-споріднені поля: ${state.usedCapacityAh} Ah")
+ *         println("Мін./макс. напруга комірки: ${state.minCellVoltage}/${state.maxCellVoltage} В, ${state.usedCapacityAh} Ah")
  *     }
  * }
  *

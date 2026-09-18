@@ -13,13 +13,14 @@ import kotlin.math.roundToInt
  * без нього BMS не починає штовхати нотифікації з даними), канал заряду/розряду
  * (0x07) і автобалансування (0x08).
  *
- * Команди з 2-байтним параметром (переважна більшість налаштувань — порогові
- * напруги, температури, затримки, ємність, ID) використовують ту саму формулу
- * контрольної суми ([settingCommand]), але це **гіпотеза**, екстрапольована з
- * підтвердженого 1-байтного випадку, а не підтверджена побайтово через Bluetooth
- * HCI snoop log реального трафіку штатного застосунку. Перед тим як покладатися
- * на запис порогових значень захисту — звіряйте показник на пристрої після
- * кожної зміни (в UI ці поля позначені попередженням).
+ * Команди з 2-байтним параметром спочатку були **гіпотезою** (той самий принцип
+ * checksum, екстрапольований з 1-байтного випадку, без HCI snoop-підтвердження).
+ * Відтоді на реальному пристрої підтверджено запис: 0x01 (напруга відсічки
+ * розряду), 0x02 (номінальний струм реле), 0x03 (максимальна ємність), 0x05
+ * (напруга відсічки заряду), 0x06 (захист від перегріву) — формула checksum
+ * для 2-байтних параметрів працює. Решта команд із 2-байтним параметром
+ * лишаються неперевіреними гіпотезами — перед довірою до них звіряйте показник
+ * на пристрої після кожної зміни (в UI позначені попередженням).
  */
 object BmsCommands {
 
@@ -58,24 +59,24 @@ object BmsCommands {
     /** Кнопка "CLR" біля кумулятивних циклів (C1.java:5721). */
     fun clearCycleCounter(): ByteArray = simpleCommand(0x13, 1)
 
-    // --- 2-байтні параметри (гіпотеза щодо checksum, див. KDoc класу) ---
+    // --- 2-байтні параметри ---
 
-    /** 0.01–5.00 В/комірку. */
+    /** ПІДТВЕРДЖЕНО на пристрої. 0.01–5.00 В/комірку. Readout: [BmsState.dischargeCutoffVoltagePerCell] (сторінка 1). */
     fun dischargeCutoffVoltage(volts: Double): ByteArray = settingCommand(0x01, (volts * 100).roundToInt())
 
-    /** 0–999.9 А. */
+    /** ПІДТВЕРДЖЕНО на пристрої. 0–999.9 А, номінальний струм реле. Readout: [BmsState.dischargeProtectionCurrent] (сторінка 1). */
     fun dischargeProtectionCurrent(amps: Double): ByteArray = settingCommand(0x02, (amps * 10).roundToInt())
 
-    /** 0–6500.0 Аг. */
+    /** ПІДТВЕРДЖЕНО на пристрої. 0–6500.0 Аг. Readout: [BmsState.maxBatteryCapacityAh] (сторінка 1). */
     fun maxBatteryCapacityAh(ah: Double): ByteArray = settingCommand(0x03, (ah * 10).roundToInt())
 
-    /** 0–192 комірок. */
+    /** Гіпотеза (не перевірено). 0–192 комірок. Readout: [BmsState.cellCount] (сторінка 1). */
     fun totalCellCount(count: Int): ByteArray = settingCommand(0x04, count)
 
-    /** 0.01–5.00 В/комірку. */
+    /** ПІДТВЕРДЖЕНО на пристрої. 0.01–5.00 В/комірку. Readout: [BmsState.chargeCutoffVoltagePerCell] (сторінка 1). */
     fun chargeCutoffVoltage(volts: Double): ByteArray = settingCommand(0x05, (volts * 100).roundToInt())
 
-    /** 0–150.0 °C. */
+    /** ПІДТВЕРДЖЕНО на пристрої. 0–150.0 °C. Readout: [BmsState.highTemperatureProtectionThreshold] (сторінка 1). */
     fun highTemperatureProtection(celsius: Double): ByteArray = settingCommand(0x06, (celsius * 10).roundToInt())
 
     /** 0.01–5.00 В. Readout: [BmsState.chargeRecoveryVoltage] (сторінка 16). */

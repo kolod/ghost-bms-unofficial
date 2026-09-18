@@ -63,7 +63,8 @@ fun DashboardScreen(
             modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item { Section("Основні показники") { BasicInfoCard(state) } }
+            item { Section("Живі показники") { LiveReadingsCard(state) } }
+            item { Section("Основні налаштування") { ProtectionSettingsEchoCard(state) } }
             item { Section("Комірки") { CellStatsCard(state) } }
             item { Section("Статус і захист") { StatusCard(state) } }
             item { Section("Ємність і цикли") { CapacityCard(state) } }
@@ -197,13 +198,26 @@ internal fun MetricRow(label: String, value: String) {
     }
 }
 
+/** Сторінка 1, offset 13-18 — жива напруга/струм/потужність батареї. Підтверджено на пристрої. */
 @Composable
-private fun BasicInfoCard(state: BmsState) {
-    MetricRow("Загальна напруга", fmt(state.totalVoltage, "В"))
-    MetricRow("Струм", fmt(state.current, "А") + "  (знак не підтверджено)")
-    MetricRow("Номінальна ємність", fmt(state.ratedCapacityAh, "Аг"))
+private fun LiveReadingsCard(state: BmsState) {
+    MetricRow("Напруга", fmt(state.liveVoltage, "В"))
+    MetricRow("Струм", fmt(state.liveCurrent, "А"))
+    MetricRow("Потужність", fmt(state.livePowerKw, "кВт"))
+}
+
+/**
+ * Сторінка 1 — це НЕ жива телеметрія, а "відлуння" уставок захисту (підтверджено
+ * власником пристрою). Живу напругу/струм батареї застосунок наразі не показує.
+ */
+@Composable
+private fun ProtectionSettingsEchoCard(state: BmsState) {
+    MetricRow("Напруга відсічки розряду", fmt(state.dischargeCutoffVoltagePerCell, "В/комірку"))
+    MetricRow("Номінальний струм реле", fmt(state.dischargeProtectionCurrent, "А"))
+    MetricRow("Максимальна ємність", fmt(state.maxBatteryCapacityAh, "Аг"))
     MetricRow("Кількість комірок", state.cellCount?.toString() ?: "—")
-    MetricRow("Температура", fmt(state.temperatureC, "°C") + "  (від'ємні значення не підтверджено)")
+    MetricRow("Напруга відсічки заряду", fmt(state.chargeCutoffVoltagePerCell, "В/комірку"))
+    MetricRow("Уставка макс. температури", fmt(state.highTemperatureProtectionThreshold, "°C"))
 }
 
 @Composable

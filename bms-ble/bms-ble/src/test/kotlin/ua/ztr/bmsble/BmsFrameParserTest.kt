@@ -26,27 +26,27 @@ class BmsFrameParserTest {
     fun `page 1 basic info`() {
         val bytes = ByteArray(19)
         bytes[0] = 1
-        putU16(bytes, 1, 5320)   // totalVoltage = 53.20 V
-        putU16(bytes, 3, 125)    // current = 12.5 A
-        putU16(bytes, 5, 1000)   // ratedCapacity = 100.0 Ah
+        putU16(bytes, 1, 5320)   // dischargeCutoffVoltagePerCell = 53.20 V
+        putU16(bytes, 3, 125)    // dischargeProtectionCurrent = 12.5 A
+        putU16(bytes, 5, 1000)   // maxBatteryCapacityAh = 100.0 Ah
         putU16(bytes, 7, 16)     // cellCount = 16
-        putU16(bytes, 9, 100)    // unknownVoltage = 1.00 V
-        putU16(bytes, 11, 250)   // temperature = 25.0 C
+        putU16(bytes, 9, 100)    // chargeCutoffVoltagePerCell = 1.00 V
+        putU16(bytes, 11, 250)   // highTemperatureProtectionThreshold = 25.0 C
 
-        putU16(bytes, 13, 532)   // secondaryVoltage = 53.2 V
-        putU16(bytes, 15, 125)   // secondaryCurrent = 12.5 A
-        putU16(bytes, 17, 28)    // powerKw = 2.8 kW
+        putU16(bytes, 13, 532)   // liveVoltage = 53.2 V
+        putU16(bytes, 15, 125)   // liveCurrent = 12.5 A
+        putU16(bytes, 17, 28)    // livePowerKw = 2.8 kW
 
         val frame = BmsFrameParser.parse(bytes) as BmsFrame.BasicInfo
-        assertEquals(53.20, frame.totalVoltage, 1e-9)
-        assertEquals(12.5, frame.current, 1e-9)
-        assertEquals(100.0, frame.ratedCapacityAh, 1e-9)
+        assertEquals(53.20, frame.dischargeCutoffVoltagePerCell, 1e-9)
+        assertEquals(12.5, frame.dischargeProtectionCurrent, 1e-9)
+        assertEquals(100.0, frame.maxBatteryCapacityAh, 1e-9)
         assertEquals(16, frame.cellCount)
-        assertEquals(1.00, frame.unknownVoltage, 1e-9)
-        assertEquals(25.0, frame.temperatureC, 1e-9)
-        assertEquals(53.2, frame.secondaryVoltage, 1e-9)
-        assertEquals(12.5, frame.secondaryCurrent, 1e-9)
-        assertEquals(2.8, frame.powerKw, 1e-9)
+        assertEquals(1.00, frame.chargeCutoffVoltagePerCell, 1e-9)
+        assertEquals(25.0, frame.highTemperatureProtectionThreshold, 1e-9)
+        assertEquals(53.2, frame.liveVoltage, 1e-9)
+        assertEquals(12.5, frame.liveCurrent, 1e-9)
+        assertEquals(2.8, frame.livePowerKw, 1e-9)
     }
 
     @Test

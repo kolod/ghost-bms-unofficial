@@ -6,11 +6,24 @@ package ua.ztr.bmsble
  * полів буде null, доки не прийде відповідний пакет хоча б раз.
  */
 data class BmsState(
-    val totalVoltage: Double? = null,
-    val current: Double? = null,
-    val ratedCapacityAh: Double? = null,
+    /** Сторінка 1, offset 13-14 — ПІДТВЕРДЖЕНО на пристрої: жива напруга батареї, В. */
+    val liveVoltage: Double? = null,
+    /** Сторінка 1, offset 15-16 — ПІДТВЕРДЖЕНО на пристрої: живий струм батареї, А. */
+    val liveCurrent: Double? = null,
+    /** Сторінка 1, offset 17-18 — жива потужність батареї, кВт. */
+    val livePowerKw: Double? = null,
+    /** Readout налаштування 0x01 — напруга відсічки розряду, В/комірку (НЕ жива напруга батареї). */
+    val dischargeCutoffVoltagePerCell: Double? = null,
+    /** Readout налаштування 0x02 — номінальний струм реле/MOSFET захисту, А (НЕ живий струм навантаження). */
+    val dischargeProtectionCurrent: Double? = null,
+    /** Readout налаштування 0x03 — максимальна (номінальна) ємність батареї, Аг. */
+    val maxBatteryCapacityAh: Double? = null,
+    /** Readout налаштування 0x04 — налаштована кількість комірок. */
     val cellCount: Int? = null,
-    val temperatureC: Double? = null,
+    /** Readout налаштування 0x05 — напруга відсічки заряду, В/комірку. */
+    val chargeCutoffVoltagePerCell: Double? = null,
+    /** Readout налаштування 0x06 — уставка макс. температури (ймовірно балансувальних модулів). */
+    val highTemperatureProtectionThreshold: Double? = null,
     val usedCapacityAh: Double? = null,
     val chargeRecoveryVoltage: Double? = null,
     val dischargeRecoveryVoltage: Double? = null,
@@ -45,11 +58,15 @@ object BmsStateReducer {
     fun reduce(current: BmsState, frame: BmsFrame, now: Long = System.currentTimeMillis()): BmsState =
         when (frame) {
             is BmsFrame.BasicInfo -> current.copy(
-                totalVoltage = frame.totalVoltage,
-                current = frame.current,
-                ratedCapacityAh = frame.ratedCapacityAh,
+                liveVoltage = frame.liveVoltage,
+                liveCurrent = frame.liveCurrent,
+                livePowerKw = frame.livePowerKw,
+                dischargeCutoffVoltagePerCell = frame.dischargeCutoffVoltagePerCell,
+                dischargeProtectionCurrent = frame.dischargeProtectionCurrent,
+                maxBatteryCapacityAh = frame.maxBatteryCapacityAh,
                 cellCount = frame.cellCount,
-                temperatureC = frame.temperatureC,
+                chargeCutoffVoltagePerCell = frame.chargeCutoffVoltagePerCell,
+                highTemperatureProtectionThreshold = frame.highTemperatureProtectionThreshold,
                 lastUpdated = now,
             )
 
@@ -69,7 +86,7 @@ object BmsStateReducer {
             )
 
             is BmsFrame.CellStats -> {
-                val rated = current.ratedCapacityAh
+                val rated = current.maxBatteryCapacityAh
                 val cycles = if (rated != null && rated > 0) frame.cumulativeDischargeCapacityAh / rated else null
                 current.copy(
                     balanceStartVoltage = frame.balanceStartVoltage,
