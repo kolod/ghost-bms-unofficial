@@ -209,6 +209,8 @@ fun SettingsScreen(
                     }
                 }
             }
+
+            item { LastUpdatedRow(state.lastUpdated) }
         }
     }
 }

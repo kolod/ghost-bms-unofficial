@@ -113,15 +113,7 @@ fun DashboardScreen(
                     }
                 }
             }
-            state.lastUpdated.takeIf { it > 0 }?.let { ts ->
-                item {
-                    Text(
-                        "Останнє оновлення: ${formatTime(ts)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(vertical = 8.dp),
-                    )
-                }
-            }
+            item { LastUpdatedRow(state.lastUpdated) }
         }
     }
 }
@@ -381,3 +373,14 @@ internal fun fmt(value: Double?, unit: String, decimals: Int = 2): String =
 
 private fun formatTime(timestampMs: Long): String =
     SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(timestampMs))
+
+/** Час останнього кадру, з якого оновлювався [BmsState] — спільний для всіх екранів. */
+@Composable
+internal fun LastUpdatedRow(lastUpdated: Long) {
+    if (lastUpdated <= 0) return
+    Text(
+        "Останнє оновлення: ${formatTime(lastUpdated)}",
+        style = MaterialTheme.typography.bodySmall,
+        modifier = Modifier.padding(vertical = 8.dp),
+    )
+}

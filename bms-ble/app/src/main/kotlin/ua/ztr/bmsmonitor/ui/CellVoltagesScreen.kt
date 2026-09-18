@@ -122,6 +122,8 @@ fun CellVoltagesScreen(
                 }
             }
         }
+
+        item(span = { GridItemSpan(maxLineSpan) }) { LastUpdatedRow(state.lastUpdated) }
     }
 }
 
