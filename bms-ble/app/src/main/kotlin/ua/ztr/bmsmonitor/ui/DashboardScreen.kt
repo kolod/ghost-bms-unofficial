@@ -13,12 +13,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
@@ -53,21 +57,16 @@ private const val DEFAULT_OPTIMISTIC_LOCKOUT_MS = 3000L
 
 @Composable
 fun DashboardScreen(
-    deviceName: String?,
-    connectionState: BmsConnectionState,
     state: BmsState,
     logLines: List<String> = emptyList(),
     onScreenOn: () -> Unit,
     onScreenOff: () -> Unit,
     onBatteryEnabledChange: (Boolean) -> Unit,
     onAutoBalance: (Boolean) -> Unit,
-    onDisconnect: () -> Unit,
     onShareLog: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize()) {
-        ConnectionBanner(deviceName, connectionState, onDisconnect)
-
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -127,8 +126,17 @@ fun DashboardScreen(
     }
 }
 
+/**
+ * Верхня панель застосунку — завжди видима над навігацією між екранами (Дашборд/
+ * Налаштування/Напруги комірок), з кнопкою-гамбургером для відкриття меню назви.
+ */
 @Composable
-private fun ConnectionBanner(deviceName: String?, state: BmsConnectionState, onDisconnect: () -> Unit) {
+internal fun ConnectionBanner(
+    deviceName: String?,
+    state: BmsConnectionState,
+    onMenuClick: () -> Unit,
+    onDisconnect: () -> Unit,
+) {
     val (label, color) = when (state) {
         BmsConnectionState.DISCONNECTED -> "Відключено" to ColorAlarm
         BmsConnectionState.CONNECTING -> "Підключення…" to ColorWarning
@@ -137,20 +145,27 @@ private fun ConnectionBanner(deviceName: String?, state: BmsConnectionState, onD
         BmsConnectionState.READY -> "Підключено" to ColorOk
         BmsConnectionState.FAILED -> "Помилка з'єднання" to ColorAlarm
     }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column {
-            Text(deviceName ?: "BMS", style = MaterialTheme.typography.titleLarge)
-            Text(label, style = MaterialTheme.typography.bodyMedium, color = color)
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(end = 16.dp, top = 8.dp, bottom = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onMenuClick) {
+                    Icon(Icons.Default.Menu, contentDescription = "Меню")
+                }
+                Column {
+                    Text(deviceName ?: "BMS", style = MaterialTheme.typography.titleLarge)
+                    Text(label, style = MaterialTheme.typography.bodyMedium, color = color)
+                }
+            }
+            Button(onClick = onDisconnect) { Text("Відключити") }
         }
-        Button(onClick = onDisconnect) { Text("Відключити") }
+        HorizontalDivider()
     }
-    HorizontalDivider()
 }
 
 @Composable
