@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import ua.ztr.bmsble.BmsConnectionState
 import ua.ztr.bmsble.BmsState
 import ua.ztr.bmsble.BmsStatusFlags
@@ -42,6 +43,13 @@ import ua.ztr.bmsble.ProtectionCode
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+/**
+ * За замовчуванням перемикач очікує підтвердження від пристрою стільки, скільки триває
+ * затримка передзаряду (пускове реле) + запас, перш ніж вважати живий стан з пристрою
+ * достовірнішим за щойно натиснуте. Якщо налаштування ще невідоме — консервативний запас.
+ */
+private const val DEFAULT_OPTIMISTIC_LOCKOUT_MS = 3000L
 
 @Composable
 fun DashboardScreen(
@@ -79,6 +87,12 @@ fun DashboardScreen(
                             label = "Батарея підключена",
                             checked = state.status?.channelOpen,
                             onCheckedChange = onBatteryEnabledChange,
+                            // Вмикання йде через пускове реле з витримкою часу перед основним —
+                            // живий стан "коло увімкнено" може ненадовго "просісти" під час
+                            // цього перехідного процесу. Даємо йому весь час затримки + запас,
+                            // перш ніж довіряти щойно прийнятому кадру більше за наш натиск.
+                            optimisticLockoutMs = ((state.settings?.preChargeDelaySec ?: 3) * 1000L + 1500L)
+                                .coerceIn(3000L, 15000L),
                         )
                         SwitchRow(
                             label = "Балансування",
@@ -205,16 +219,44 @@ internal fun MetricRow(label: String, value: String) {
 /**
  * Рядок керування перемикачем. [checked] — живий стан з пристрою (`null`, доки не прийшов
  * перший кадр — тоді перемикач показує "вимкнено" за замовчуванням, але це не підтверджений факт).
+ *
+ * Показує щойно натиснуте значення ("оптимістично") протягом [optimisticLockoutMs] замість
+ * живого [checked] з пристрою. Без цього перемикач, прив'язаний напряму до живого стану,
+ * "відскакував" назад одразу після натискання, щойно приходив черговий кадр статусу до
+ * завершення перехідного процесу на пристрої (наприклад, реле, увімкнене через пускове реле
+ * з витримкою часу, — виглядало як "увімкнув і одразу вимкнув").
  */
 @Composable
-private fun SwitchRow(label: String, checked: Boolean?, onCheckedChange: (Boolean) -> Unit) {
+private fun SwitchRow(
+    label: String,
+    checked: Boolean?,
+    onCheckedChange: (Boolean) -> Unit,
+    optimisticLockoutMs: Long = DEFAULT_OPTIMISTIC_LOCKOUT_MS,
+) {
+    var pending by remember { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(checked) {
+        if (pending != null && checked == pending) pending = null
+    }
+    LaunchedEffect(pending) {
+        if (pending != null) {
+            delay(optimisticLockoutMs)
+            pending = null
+        }
+    }
+
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, style = MaterialTheme.typography.bodyMedium)
-        Switch(checked = checked ?: false, onCheckedChange = onCheckedChange)
+        Switch(
+            checked = pending ?: checked ?: false,
+            onCheckedChange = { new ->
+                pending = new
+                onCheckedChange(new)
+            },
+        )
     }
 }
 
