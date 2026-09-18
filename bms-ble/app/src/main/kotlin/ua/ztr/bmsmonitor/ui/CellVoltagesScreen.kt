@@ -20,28 +20,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import ua.ztr.bmsble.BmsState
 
-/** Максимальна кількість комірок, яку теоретично підтримує BMS (за інструкцією пристрою). */
-private const val MAX_CELLS = 192
-
-/** Скільки комірок реально отримують живу напругу в цьому протоколі (перевірено по обох вікнах штатного застосунку). */
+/** Скільки комірок реально отримують живу напругу в одному банку цього протоколу. */
 private const val PROTOCOL_VOLTAGE_CELL_LIMIT = 96
 
 /**
- * Таблиця напруг усіх комірок (аналог вікна4/窗口4 штатного застосунку). Сітка
- * розрахована на до 192 комірок (`state.cellCount`, за інструкцією пристрою), але
- * BLE-протокол цього застосунку (перевірено в обох вікнах реального часу штатного
- * застосунку — C2.java і C4.java) реально передає живу напругу лише для перших 96 —
- * решта показуються як "н/д". Ймовірна причина: власний екран BMS перемикає групи
- * по 48 комірок (літера A/B/C/D у кутку) — можливо, комірки 97-192 потребують ще
- * не знайденої команди "перемкнути групу" (кандидати — команди 0x09/0x12/0x13,
- * чия точна мета не підтверджена, див. format.md).
+ * Таблиця напруг усіх комірок (аналог вікна4/窗口4 штатного застосунку). 192-комірковий
+ * пакет складається з ДВОХ незалежних банків по 96 комірок кожен (BLE-протокол передає
+ * банки під різними pageType-схемами — нумерація вікон C2 і C4 декомпільованого коду).
+ * Номер комірки в банку A і той самий номер у банку B — це РІЗНІ фізичні комірки, тож
+ * показуємо банки окремими сітками, кожна з власною нумерацією 1..96.
  */
 @Composable
 fun CellVoltagesScreen(
     state: BmsState,
     modifier: Modifier = Modifier,
 ) {
-    val cellCount = (state.cellCount ?: PROTOCOL_VOLTAGE_CELL_LIMIT).coerceIn(0, MAX_CELLS)
+    val perBankCellCount = ((state.cellCount ?: (2 * PROTOCOL_VOLTAGE_CELL_LIMIT)) / 2)
+        .coerceIn(0, PROTOCOL_VOLTAGE_CELL_LIMIT)
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(4),
@@ -50,17 +45,34 @@ fun CellVoltagesScreen(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         contentPadding = PaddingValues(vertical = 12.dp),
     ) {
-        items(cellCount) { index ->
-            val cellNumber = index + 1
-            CellVoltageTile(
-                cellNumber = cellNumber,
-                voltage = state.cellVoltages[cellNumber],
-                outOfProtocolRange = cellNumber > PROTOCOL_VOLTAGE_CELL_LIMIT,
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            Text(
+                "Банк A",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
             )
         }
-        // Банк B (0x02+0x0A) — підтверджено, саме тут реальні дані з фізичних датчиків.
-        // Банк A (0x12, state.moduleTemperaturesC) на пристрої власника завжди нульовий,
-        // тож поки не показуємо — див. коментар полів у BmsState.kt.
+        items(perBankCellCount) { index ->
+            val cellNumber = index + 1
+            CellVoltageTile(cellNumber = cellNumber, voltage = state.cellVoltages[cellNumber])
+        }
+
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            Text(
+                "Банк B",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        }
+        items(perBankCellCount) { index ->
+            val cellNumber = index + 1
+            CellVoltageTile(cellNumber = cellNumber, voltage = state.auxCellVoltages[cellNumber])
+        }
+
+        // Банк B температур (0x02+0x0A) — підтверджено, саме тут реальні дані з фізичних
+        // датчиків. Банк A (0x12, state.moduleTemperaturesC) на пристрої власника завжди
+        // нульовий, тож поки не показуємо — див. коментар полів у BmsState.kt.
         if (state.auxModuleTemperaturesC.isNotEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Text(
@@ -79,7 +91,7 @@ fun CellVoltagesScreen(
 }
 
 @Composable
-private fun CellVoltageTile(cellNumber: Int, voltage: Double?, outOfProtocolRange: Boolean) {
+private fun CellVoltageTile(cellNumber: Int, voltage: Double?) {
     val missing = voltage == null || voltage == 0.0
     val color = if (missing) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
     Card(modifier = Modifier.fillMaxWidth()) {
@@ -89,11 +101,7 @@ private fun CellVoltageTile(cellNumber: Int, voltage: Double?, outOfProtocolRang
         ) {
             Text("№$cellNumber", style = MaterialTheme.typography.labelSmall)
             Text(
-                when {
-                    outOfProtocolRange -> "н/д"
-                    missing -> "—"
-                    else -> "%.3f В".format(voltage)
-                },
+                if (missing) "—" else "%.3f В".format(voltage),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = color,

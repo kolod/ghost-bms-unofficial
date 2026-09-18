@@ -14,17 +14,24 @@ import ua.ztr.bmsble.ProtectionCode
  */
 internal object DemoBmsData {
 
-    private const val CELL_COUNT = 16
+    /** Загальна кількість комірок = 2 банки по [CELLS_PER_BANK] (див. BmsState.cellVoltages). */
+    private const val CELLS_PER_BANK = 8
+    private const val CELL_COUNT = 2 * CELLS_PER_BANK
     private const val BASE_CELL_VOLTAGE = 3.30
 
     fun state(tick: Int): BmsState {
         val phase = tick * 0.15
 
-        val cellVoltages = (1..CELL_COUNT).associateWith { i ->
+        // Банк A і банк B — різні фізичні комірки з тими самими номерами-мітками,
+        // тож демо навмисно генерує для них трохи різні значення (не однакові).
+        val cellVoltages = (1..CELLS_PER_BANK).associateWith { i ->
             (BASE_CELL_VOLTAGE + 0.03 * sin(phase + i * 0.4) + (i % 4) * 0.004).round(3)
         }
+        val auxCellVoltages = (1..CELLS_PER_BANK).associateWith { i ->
+            (BASE_CELL_VOLTAGE + 0.03 * sin(phase + i * 0.4 + 1.0) + (i % 3) * 0.003).round(3)
+        }
         val simulatedLoadCurrent = 3.0 * sin(phase * 0.5)
-        val simulatedVoltage = cellVoltages.values.sum().round(2)
+        val simulatedVoltage = (cellVoltages.values.sum() + auxCellVoltages.values.sum()).round(2)
         val moduleTemps = (1..8).associateWith { (24.0 + 2.0 * sin(phase * 0.3 + it)).round(1) }
 
         return BmsState(
@@ -59,8 +66,8 @@ internal object DemoBmsData {
                 alarmHighTemperature = false,
             ),
             balanceStartVoltage = 3.40,
-            minCellVoltage = cellVoltages.values.min(),
-            maxCellVoltage = cellVoltages.values.max(),
+            minCellVoltage = (cellVoltages.values + auxCellVoltages.values).min(),
+            maxCellVoltage = (cellVoltages.values + auxCellVoltages.values).max(),
             balanceBaselineVoltage = 3.30,
             lowVoltageHostShutdownVoltage = 2.50,
             hostShutdownDelaySeconds = 30,
@@ -79,6 +86,7 @@ internal object DemoBmsData {
                 canReceiveId = 101,
             ),
             cellVoltages = cellVoltages,
+            auxCellVoltages = auxCellVoltages,
             auxModuleTemperaturesC = moduleTemps,
             lastUpdated = System.currentTimeMillis(),
         )

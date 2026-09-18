@@ -231,37 +231,36 @@ class BmsFrameParserTest {
     }
 
     @Test
-    fun `page 3-7 and 11-15 are a duplicate cell-voltage numbering (C2 window)`() {
-        val page3 = ByteArray(19).also { it[0] = 3; putU16(it, 1, 3400) } // cell 1
-        val page11 = ByteArray(19).also { it[0] = 11; putU16(it, 1, 3450) } // cell 49
+    fun `page 3-7 and 11-15 are a separate cell-voltage bank (C2 window), not a duplicate`() {
+        // ВИПРАВЛЕНО: раніше вважалось, що ці сторінки дублюють банк A (19-29) під тими
+        // самими номерами комірок. Насправді номер "1" тут і номер "1" на сторінці 19 —
+        // різні фізичні комірки різних банків, тож парсер повертає ОКРЕМИЙ тип кадру.
+        val page3 = ByteArray(19).also { it[0] = 3; putU16(it, 1, 3400) } // банк B, комірка 1
+        val page11 = ByteArray(19).also { it[0] = 11; putU16(it, 1, 3450) } // банк B, комірка 49
 
-        val frame3 = BmsFrameParser.parse(page3) as BmsFrame.CellVoltages
+        val frame3 = BmsFrameParser.parse(page3) as BmsFrame.AuxCellVoltages
         assertEquals(9, frame3.cells.size)
         assertEquals(3.400, frame3.cells[1]!!, 1e-9)
 
-        val frame11 = BmsFrameParser.parse(page11) as BmsFrame.CellVoltages
+        val frame11 = BmsFrameParser.parse(page11) as BmsFrame.AuxCellVoltages
         assertEquals(3.450, frame11.cells[49]!!, 1e-9)
     }
 
     @Test
-    fun `a zero reading from the duplicate page numbering does not clobber a real value`() {
-        // Той самий сценарій, що спричиняв "блимання" на реальному пристрої: сторінка
-        // 3 (жива схема) дає реальну напругу комірки 1, а сторінка 19 (той самий номер
-        // комірки, нежива схема на конкретному пристрої) шле нуль — нуль не повинен
-        // затерти вже відоме реальне значення.
-        val page3Real = ByteArray(19).also { it[0] = 3; putU16(it, 1, 3400) }
-        val page19Zero = ByteArray(19).also { it[0] = 19 } // усі нулі
+    fun `bank A and bank B cell voltages are kept in separate state fields`() {
+        // Це і був корінь "блимання": однакові номери комірок з РІЗНИХ банків
+        // потрапляли в одну мапу, і нуль відсутньої комірки одного банку затирав
+        // реальне значення тієї ж клітинки-номера іншого банку. Розділені поля
+        // унеможливлюють це — банки більше не мають спільних ключів.
+        val page3BankB = ByteArray(19).also { it[0] = 3; putU16(it, 1, 3400) } // банк B, комірка 1 = 3.400 В
+        val page19BankA = ByteArray(19).also { it[0] = 19 } // банк A, комірка 1 = 0.0 В (відсутня)
 
         var state = BmsState()
-        state = BmsStateReducer.reduce(state, BmsFrameParser.parse(page3Real)!!, now = 1L)
-        assertEquals(3.400, state.cellVoltages[1]!!, 1e-9)
+        state = BmsStateReducer.reduce(state, BmsFrameParser.parse(page3BankB)!!, now = 1L)
+        state = BmsStateReducer.reduce(state, BmsFrameParser.parse(page19BankA)!!, now = 2L)
 
-        state = BmsStateReducer.reduce(state, BmsFrameParser.parse(page19Zero)!!, now = 2L)
-        assertEquals(3.400, state.cellVoltages[1]!!, 1e-9) // не затерто нулем
-
-        // Але для комірки, про яку ще нема даних, нуль все одно записується
-        // (щоб відрізняти "відомо, що відсутня" від "ще нема даних" — обидва "—" в UI).
-        assertEquals(0.0, state.cellVoltages[2]!!, 1e-9)
+        assertEquals(3.400, state.auxCellVoltages[1]!!, 1e-9) // банк B не зачеплено
+        assertEquals(0.0, state.cellVoltages[1]!!, 1e-9)      // банк A має власний, справжній нуль
     }
 
     @Test

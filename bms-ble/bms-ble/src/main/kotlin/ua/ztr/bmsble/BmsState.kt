@@ -48,8 +48,15 @@ data class BmsState(
     val cumulativeCycles: Double? = null,
     val triggeringCellNumber: Int? = null,
     val settings: BmsSettings? = null,
-    /** Напруги окремих комірок (номер 1-based → вольти). Комірки 97-192 протоколом не передаються. */
+    /**
+     * Напруги комірок банку A (сторінки 19-23/25-29, номер 1-based → вольти). 192-
+     * комірковий пакет складається з двох банків по 96 комірок — номер "1" тут і
+     * номер "1" в [auxCellVoltages] позначають РІЗНІ фізичні комірки (див. коментар
+     * до [BmsFrame.CellVoltages]). Комірки понад 96 у межах банку протоколом не передаються.
+     */
     val cellVoltages: Map<Int, Double> = emptyMap(),
+    /** Напруги комірок банку B (сторінки 3-7/11-15, нумерація вікна C2). Див. [cellVoltages]. */
+    val auxCellVoltages: Map<Int, Double> = emptyMap(),
     /**
      * Температури модулів, банк A — page 0x12 (номер 1-based → °C, усі 8 одразу).
      * На реальному пристрої власника стабільно нульовий (сенсори цього банку не
@@ -123,7 +130,7 @@ object BmsStateReducer {
 
             is BmsFrame.ProtectionTriggerCell -> current.copy(
                 triggeringCellNumber = frame.cellNumber,
-                cellVoltages = current.cellVoltages.mergeNonZero(frame.remainderCells),
+                cellVoltages = current.cellVoltages + frame.remainderCells,
                 lastUpdated = now,
             )
 
@@ -144,27 +151,15 @@ object BmsStateReducer {
             )
 
             is BmsFrame.CellVoltages -> current.copy(
-                cellVoltages = current.cellVoltages.mergeNonZero(frame.cells),
+                cellVoltages = current.cellVoltages + frame.cells,
+                lastUpdated = now,
+            )
+
+            is BmsFrame.AuxCellVoltages -> current.copy(
+                auxCellVoltages = current.auxCellVoltages + frame.cells,
                 lastUpdated = now,
             )
 
             is BmsFrame.Unknown -> current
         }
-
-    /**
-     * Зливає нові показники з [updates], але НЕ дає нулю затерти вже відоме реальне
-     * (ненульове) значення. Потрібно тому, що штатний застосунок дублює напруги комірок
-     * під двома різними pageType-схемами (нумерація вікон C2 і C4) — на конкретному
-     * пристрої "живою" виявляється лише одна з них, а друга щоцикл шле нулі; без цього
-     * фільтра дані в UI "блимають" між реальним значенням і нулем щоразу, як приходить
-     * кадр із неробочої схеми.
-     */
-    private fun Map<Int, Double>.mergeNonZero(updates: Map<Int, Double>): Map<Int, Double> {
-        if (updates.isEmpty()) return this
-        val result = toMutableMap()
-        for ((key, value) in updates) {
-            if (value != 0.0 || key !in result) result[key] = value
-        }
-        return result
-    }
 }

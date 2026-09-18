@@ -9,16 +9,20 @@ object BmsFrameParser {
     private const val FRAME_SIZE = 19
 
     /**
-     * Сторінка → відсортований список номерів комірок (1-based), які вона несе, offset
-     * за зростанням. Дублюючі pageType-схеми: штатний застосунок передає ті самі
-     * напруги комірок ДВІЧІ під різними номерами сторінок (нумерація вікна C2 і вікна
-     * C4 з декомпільованого коду) — на конкретному пристрої "живою" (не нульовою)
-     * виявилась лише одна зі схем, тому парсимо обидві й зливаємо без взаємного
-     * затирання нулями (див. `BmsState.mergeCellVoltages`).
+     * Сторінка → відсортований список номерів комірок (1-based) БАНКУ A, які вона несе,
+     * offset за зростанням (нумерація вікна C4 з декомпільованого коду).
+     *
+     * ВИПРАВЛЕНО: раніше вважалось, що [BANK_B_CELL_VOLTAGE_PAGES] (нумерація вікна C2)
+     * — це дублююча схема для тих самих номерів комірок. Насправді це окремий фізичний
+     * банк: "комірка 1" тут і "комірка 1" в банку B — різні комірки. Плутанина двох
+     * банків в одній мапі (з тими самими ключами-номерами) і спричиняла "блимання" —
+     * нуль відсутньої комірки одного банку затирав реальне значення тієї ж клітинки-
+     * номера іншого банку. Тепер банки парсяться в окремі типи кадрів
+     * ([BmsFrame.CellVoltages] / [BmsFrame.AuxCellVoltages]) і зберігаються в окремих
+     * полях [BmsState] — без спільних ключів, отже без взаємного затирання.
      */
-    private val CELL_VOLTAGE_PAGES: Map<Int, List<Int>> = buildMap {
+    private val BANK_A_CELL_VOLTAGE_PAGES: Map<Int, List<Int>> = buildMap {
         // "9-pair" сторінки: offset 1-2..17-18 → 9 послідовних комірок.
-        // Нумерація вікна C4 (декомпільований код):
         put(19, (1..9).toList())
         put(20, (10..18).toList())
         put(21, (19..27).toList())
@@ -26,16 +30,19 @@ object BmsFrameParser {
         put(23, (37..45).toList())
         // Сторінка 24 — окремий випадок, див. parseProtectionTriggerCell: той самий
         // кадр несе і номер комірки, що спричинила захист (offset 17-18), і 6
-        // "залишкових" напруг комірок 46-48/94-96 (offset 1-12) — різні вікна
-        // штатного застосунку читають різні байти того самого пакета.
+        // "залишкових" напруг комірок 46-48/94-96 банку A (offset 1-12).
         put(25, (49..57).toList())
         put(26, (58..66).toList())
         put(27, (67..75).toList())
         put(28, (76..84).toList())
         put(29, (85..93).toList())
-        // Нумерація вікна C2 — той самий сенс (ідентичні діапазони комірок), інші
-        // pageType. Підтверджено на реальному пристрої: саме ЦЯ схема виявилась
-        // "живою" (19-29 стабільно нульові, 3-15 — реальні значення).
+    }
+
+    /**
+     * Сторінка → список номерів комірок (1-based) БАНКУ B (нумерація вікна C2) —
+     * окремий фізичний банк, не дублікат банку A. Див. коментар [BANK_A_CELL_VOLTAGE_PAGES].
+     */
+    private val BANK_B_CELL_VOLTAGE_PAGES: Map<Int, List<Int>> = buildMap {
         put(3, (1..9).toList())
         put(4, (10..18).toList())
         put(5, (19..27).toList())
@@ -46,11 +53,9 @@ object BmsFrameParser {
         put(13, (67..75).toList())
         put(14, (76..84).toList())
         put(15, (85..93).toList())
-        // TODO: сторінка 8 (C2) імовірно, за аналогією зі сторінкою 24, теж несе
-        // "залишкові" напруги комірок 46-48/94-96 в offset 1-12 (плюс дані ємності
-        // в offset 13-18, які вже парсяться як UsedCapacity) — не реалізовано,
-        // не підтверджено (на пакеті власника лише 40 комірок, тож цей діапазон
-        // порожній в обох схемах і перевірити різницю зараз неможливо).
+        // TODO: сторінка 8 імовірно, за аналогією зі сторінкою 24 (банк A), теж несе
+        // "залишкові" напруги комірок 46-48/94-96 банку B в offset 1-12 (offset 13-18
+        // вже парситься окремо як UsedCapacity) — не реалізовано, не підтверджено.
     }
 
     fun parse(bytes: ByteArray): BmsFrame? {
@@ -66,7 +71,10 @@ object BmsFrameParser {
             18 -> parseModuleTemperatures(bytes)
             24 -> parseProtectionTriggerCell(bytes)
             31 -> parseSettings(bytes)
-            in CELL_VOLTAGE_PAGES -> parseCellVoltages(bytes, CELL_VOLTAGE_PAGES.getValue(pageType))
+            in BANK_A_CELL_VOLTAGE_PAGES ->
+                BmsFrame.CellVoltages(parseCellVoltages(bytes, BANK_A_CELL_VOLTAGE_PAGES.getValue(pageType)))
+            in BANK_B_CELL_VOLTAGE_PAGES ->
+                BmsFrame.AuxCellVoltages(parseCellVoltages(bytes, BANK_B_CELL_VOLTAGE_PAGES.getValue(pageType)))
             else -> BmsFrame.Unknown(pageType, bytes.toList())
         }
     }
@@ -192,12 +200,10 @@ object BmsFrameParser {
         return BmsFrame.AuxModuleTemperatures(probes)
     }
 
-    private fun parseCellVoltages(b: ByteArray, cellNumbers: List<Int>): BmsFrame.CellVoltages {
-        val cells = cellNumbers.mapIndexed { index, cellNumber ->
+    private fun parseCellVoltages(b: ByteArray, cellNumbers: List<Int>): Map<Int, Double> =
+        cellNumbers.mapIndexed { index, cellNumber ->
             cellNumber to u16(b, 1 + index * 2) / 1000.0
         }.toMap()
-        return BmsFrame.CellVoltages(cells)
-    }
 
     /** Читає 16-бітне беззнакове big-endian число з offset i, i+1. */
     private fun u16(b: ByteArray, i: Int): Int =
