@@ -18,10 +18,27 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlin.math.ceil
 import ua.ztr.bmsble.BmsState
 
 /** Скільки комірок реально отримують живу напругу в одному банку цього протоколу. */
 private const val PROTOCOL_VOLTAGE_CELL_LIMIT = 96
+
+/**
+ * Один температурний модуль обслуговує максимум 12 комірок; максимум 16 модулів
+ * (16×12=192) покриває заявлену максимальну кількість комірок пристрою. Підтверджено
+ * власником пристрою.
+ */
+private const val CELLS_PER_TEMP_MODULE = 12
+private const val MAX_TEMP_MODULES = 16
+
+/**
+ * Скільки з очікуваних модулів мають підтверджене джерело даних у поточному
+ * Kotlin-порту — сторінки 0x02+0x0A (`auxModuleTemperaturesC`), модулі 1-8. Модулі
+ * 9-16 (сторінка 0x12) на пристрої власника стабільно нульові — не показуємо
+ * (TODO, див. коментар `BmsState.moduleTemperaturesC`).
+ */
+private const val CONFIRMED_TEMP_MODULE_SOURCE_LIMIT = 8
 
 /**
  * Таблиця напруг усіх комірок (аналог вікна4/窗口4 штатного застосунку). 192-комірковий
@@ -70,10 +87,13 @@ fun CellVoltagesScreen(
             CellVoltageTile(cellNumber = cellNumber, voltage = state.auxCellVoltages[cellNumber])
         }
 
-        // Банк B температур (0x02+0x0A) — підтверджено, саме тут реальні дані з фізичних
-        // датчиків. Банк A (0x12, state.moduleTemperaturesC) на пристрої власника завжди
-        // нульовий, тож поки не показуємо — див. коментар полів у BmsState.kt.
-        if (state.auxModuleTemperaturesC.isNotEmpty()) {
+        // Кількість модулів = скільки їх фізично потрібно для сконфігурованої кількості
+        // комірок (1 модуль обслуговує максимум 12 комірок), а не просто "скільки
+        // непорожніх ключів прийшло" — так грід одразу показує очікувану кількість
+        // модулів, а не лише ті, що встигли надіслати дані.
+        val totalCellCount = state.cellCount ?: (2 * PROTOCOL_VOLTAGE_CELL_LIMIT)
+        val moduleCount = ceil(totalCellCount / CELLS_PER_TEMP_MODULE.toDouble()).toInt().coerceIn(0, MAX_TEMP_MODULES)
+        if (moduleCount > 0) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Text(
                     "Температура модулів",
@@ -82,9 +102,24 @@ fun CellVoltagesScreen(
                     modifier = Modifier.padding(top = 8.dp),
                 )
             }
-            val temps = state.auxModuleTemperaturesC.toSortedMap()
-            items(temps.entries.toList()) { (probe, celsius) ->
-                TemperatureTile(probeNumber = probe, celsius = celsius)
+            // Банк B (0x02+0x0A) — підтверджено, саме тут реальні дані з фізичних датчиків
+            // для модулів 1-8. Банк A (0x12, state.moduleTemperaturesC) на пристрої
+            // власника завжди нульовий, тож поки не показуємо — див. коментар полів у
+            // BmsState.kt. Якщо конфігурація вимагає модулів понад 8-й — джерело для них
+            // у протоколі ще не підтверджено (TODO), тож просто не рендеримо ці тайли.
+            val shownModules = moduleCount.coerceAtMost(CONFIRMED_TEMP_MODULE_SOURCE_LIMIT)
+            items(shownModules) { index ->
+                val probe = index + 1
+                TemperatureTile(probeNumber = probe, celsius = state.auxModuleTemperaturesC[probe])
+            }
+            if (moduleCount > CONFIRMED_TEMP_MODULE_SOURCE_LIMIT) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Text(
+                        "Модулі ${CONFIRMED_TEMP_MODULE_SOURCE_LIMIT + 1}-$moduleCount: джерело даних у протоколі ще не підтверджено (TODO)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
     }
@@ -111,7 +146,7 @@ private fun CellVoltageTile(cellNumber: Int, voltage: Double?) {
 }
 
 @Composable
-private fun TemperatureTile(probeNumber: Int, celsius: Double) {
+private fun TemperatureTile(probeNumber: Int, celsius: Double?) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(8.dp).fillMaxWidth(),
@@ -119,7 +154,7 @@ private fun TemperatureTile(probeNumber: Int, celsius: Double) {
         ) {
             Text("Модуль $probeNumber", style = MaterialTheme.typography.labelSmall)
             Text(
-                "%.1f °C".format(celsius),
+                if (celsius == null) "—" else "%.1f °C".format(celsius),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
             )
