@@ -51,8 +51,19 @@ configure<ApplicationExtension> {
                 keyPassword = keystoreProperties.getProperty("keyPassword")
             }
         }
-        buildTypes {
-            getByName("release") {
+    }
+
+    buildTypes {
+        getByName("release") {
+            // Strips unused code and obfuscates class/method names — without this the
+            // release APK decompiles back to near-original source (see proguard-rules.pro).
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                file("proguard-rules.pro"),
+            )
+            if (keystoreProperties.containsKey("storeFile")) {
                 signingConfig = signingConfigs.getByName("release")
             }
         }
