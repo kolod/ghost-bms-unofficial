@@ -63,8 +63,11 @@ jobs:
         if: always()
         run: rm -f app/release.keystore.jks app/keystore.properties
 
+      - name: Rename release APK
+        run: mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/ghost-bms-unofficial.apk
+
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v3
         with:
-          files: bms-ble/app/build/outputs/apk/release/*.apk
+          files: bms-ble/app/build/outputs/apk/release/ghost-bms-unofficial.apk
           generate_release_notes: true
