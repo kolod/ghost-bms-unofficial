@@ -21,8 +21,9 @@ configure<ApplicationExtension> {
         applicationId = "io.github.kolod.ghostbms"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        // CI passes -PappVersionCode/-PappVersionName from the release tag; local/debug builds fall back to these.
+        versionCode = (findProperty("appVersionCode") as String?)?.toIntOrNull() ?: 1
+        versionName = findProperty("appVersionName") as String? ?: "1.0"
     }
 
     buildFeatures {

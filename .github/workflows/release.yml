@@ -1,0 +1,70 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bms-ble
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Accept Android SDK licenses
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Decode signing keystore
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > app/release.keystore.jks
+
+      - name: Write keystore.properties
+        run: |
+          cat > app/keystore.properties <<EOF
+          storeFile=release.keystore.jks
+          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+          EOF
+
+      - name: Derive version name from tag
+        id: version
+        run: echo "name=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Run unit tests
+        run: ./gradlew test --stacktrace
+
+      - name: Build signed release APK
+        run: |
+          ./gradlew :app:assembleRelease \
+            -PappVersionCode=${{ github.run_number }} \
+            -PappVersionName=${{ steps.version.outputs.name }} \
+            --stacktrace
+
+      - name: Clean up signing files
+        if: always()
+        run: rm -f app/release.keystore.jks app/keystore.properties
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: bms-ble/app/build/outputs/apk/release/*.apk
+          generate_release_notes: true
