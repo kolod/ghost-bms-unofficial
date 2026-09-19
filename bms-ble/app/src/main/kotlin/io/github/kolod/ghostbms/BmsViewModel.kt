@@ -60,6 +60,9 @@ class BmsViewModel(application: Application) : AndroidViewModel(application) {
     private var connection: BmsConnection? = null
     private var demoJob: Job? = null
 
+    // BLUETOOTH_CONNECT (needed for device.name below) is already verified granted by
+    // MainActivity before the scan UI is reachable — lint can't see that gating.
+    @Suppress("MissingPermission")
     fun startScan() {
         if (_isScanning.value) return
         _scanResults.value = emptyList()
@@ -188,7 +191,6 @@ class BmsViewModel(application: Application) : AndroidViewModel(application) {
     fun setCanReceiveId(id: Int) = send(BmsCommands.canReceiveId(id))
 
     override fun onCleared() {
-        super.onCleared()
         stopDemo()
         connection?.close()
     }

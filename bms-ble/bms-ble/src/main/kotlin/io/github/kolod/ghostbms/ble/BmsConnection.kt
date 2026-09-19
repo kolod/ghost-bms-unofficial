@@ -120,7 +120,7 @@ class BmsConnection(
             }
         }
 
-        @Suppress("DEPRECATION")
+        @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
         override fun onCharacteristicChanged(g: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
             // Викликається на API < 33; на 33+ використовується overload нижче.
             handleIncoming(characteristic.value)
@@ -166,6 +166,7 @@ class BmsConnection(
         // TRANSPORT_LE явно (а не TRANSPORT_AUTO за замовчуванням) — так само, як штатний
         // застосунок. На деяких чипсетах/OEM-стеках TRANSPORT_AUTO підключається й підписує
         // нотифікації без помилок, але BLE-нотифікації від периферії після цього не доходять.
+        @Suppress("DEPRECATION")
         gatt = device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
     }
 
