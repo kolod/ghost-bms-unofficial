@@ -35,3 +35,5 @@ keystore.properties
 
 # Signed APK/AAB exported manually from Android Studio (build artifacts, not source)
 bms-ble/app/release/
+
+/decompiled/
