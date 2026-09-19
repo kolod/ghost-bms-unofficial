@@ -7,7 +7,9 @@ import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothProfile
+import android.bluetooth.BluetoothStatusCodes
 import android.content.Context
+import android.os.Build
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -102,10 +104,14 @@ class BmsConnection(
                 sendCommand(BmsCommands.enterRealtimeMonitoring())
                 return
             }
-            @Suppress("DEPRECATION")
-            cccd.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-            @Suppress("DEPRECATION")
-            g.writeDescriptor(cccd)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                g.writeDescriptor(cccd, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
+            } else {
+                @Suppress("DEPRECATION")
+                cccd.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                @Suppress("DEPRECATION")
+                g.writeDescriptor(cccd)
+            }
         }
 
         override fun onDescriptorWrite(g: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int) {
@@ -179,11 +185,16 @@ class BmsConnection(
         val characteristic = writeCharacteristic ?: return false
         if (_connectionState.value != BmsConnectionState.READY) return false
 
-        characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
-        @Suppress("DEPRECATION")
-        characteristic.value = command
-        @Suppress("DEPRECATION")
-        val accepted = g.writeCharacteristic(characteristic)
+        val accepted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            g.writeCharacteristic(characteristic, command, BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE) ==
+                BluetoothStatusCodes.SUCCESS
+        } else {
+            characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
+            @Suppress("DEPRECATION")
+            characteristic.value = command
+            @Suppress("DEPRECATION")
+            g.writeCharacteristic(characteristic)
+        }
         logger.logBytes("TX accepted=$accepted", command)
         return accepted
     }
