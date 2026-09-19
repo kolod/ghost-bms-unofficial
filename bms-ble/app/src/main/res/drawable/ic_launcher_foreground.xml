@@ -1,0 +1,20 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Battery casing (outline only) -->
+    <path
+        android:pathData="M43,30 H65 A5,5 0 0 1 70,35 V73 A5,5 0 0 1 65,78 H43 A5,5 0 0 1 38,73 V35 A5,5 0 0 1 43,30 Z"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="4"
+        android:fillColor="#00000000" />
+    <!-- Battery terminal -->
+    <path
+        android:pathData="M49,22 H59 A2,2 0 0 1 61,24 V28 A2,2 0 0 1 59,30 H49 A2,2 0 0 1 47,28 V24 A2,2 0 0 1 49,22 Z"
+        android:fillColor="#FFFFFFFF" />
+    <!-- Bolt -->
+    <path
+        android:pathData="M52,74 L52,60 L44,60 L56,38 L56,52 L64,52 Z"
+        android:fillColor="#FFFFFFFF" />
+</vector>

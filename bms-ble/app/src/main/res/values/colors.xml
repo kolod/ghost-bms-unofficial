@@ -1,0 +1,4 @@
+<resources>
+    <!-- Matches ColorOk / primary in ui/Theme.kt, ties the launcher icon to the in-app brand color. -->
+    <color name="ic_launcher_background">#2E7D32</color>
+</resources>
