@@ -32,3 +32,6 @@ Thumbs.db
 # Release signing key for bms-ble app (personal — never commit)
 *.keystore.jks
 keystore.properties
+
+# Signed APK/AAB exported manually from Android Studio (build artifacts, not source)
+bms-ble/app/release/
