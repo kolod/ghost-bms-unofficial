@@ -1,4 +1,4 @@
-package ua.ztr.bmsble
+package io.github.kolod.ghostbms.ble
 
 /**
  * Останній відомий стан BMS, зібраний з усіх типів пакетів, що надійшли дотепер.

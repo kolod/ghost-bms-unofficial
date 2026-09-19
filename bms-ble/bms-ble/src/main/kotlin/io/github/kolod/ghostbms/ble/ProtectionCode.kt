@@ -1,4 +1,4 @@
-package ua.ztr.bmsble
+package io.github.kolod.ghostbms.ble
 
 /** Коди захисту з page 0x10 (offset 7-8), значення підтверджені у штатному застосунку. */
 enum class ProtectionCode(val code: Int, val description: String) {

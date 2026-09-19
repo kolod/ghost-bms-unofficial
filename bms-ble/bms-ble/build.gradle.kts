@@ -5,7 +5,7 @@ plugins {
 }
 
 configure<LibraryExtension> {
-    namespace = "ua.ztr.bmsble"
+    namespace = "io.github.kolod.ghostbms.ble"
     compileSdk = 37
 
     defaultConfig {

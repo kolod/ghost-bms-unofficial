@@ -1,4 +1,4 @@
-package ua.ztr.bmsble
+package io.github.kolod.ghostbms.ble
 
 /**
  * Чистий (без залежностей від Android) парсер 19-байтних BLE-нотифікацій BMS.

@@ -1,4 +1,4 @@
-package ua.ztr.bmsble
+package io.github.kolod.ghostbms.ble
 
 /** Бітові прапорці статусу з page 0x10, останній байт (offset 18). */
 data class BmsStatusFlags(

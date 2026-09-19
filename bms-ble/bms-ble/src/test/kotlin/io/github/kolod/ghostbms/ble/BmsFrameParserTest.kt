@@ -1,4 +1,4 @@
-package ua.ztr.bmsble
+package io.github.kolod.ghostbms.ble
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

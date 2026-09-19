@@ -1,4 +1,4 @@
-package ua.ztr.bmsble
+package io.github.kolod.ghostbms.ble
 
 /**
  * Розпарсений 19-байтний пакет від BMS. Тип визначається першим байтом ("page").

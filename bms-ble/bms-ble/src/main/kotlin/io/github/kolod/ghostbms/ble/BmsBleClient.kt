@@ -1,4 +1,4 @@
-package ua.ztr.bmsble
+package io.github.kolod.ghostbms.ble
 
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
