@@ -14,13 +14,13 @@ val keystoreProperties = Properties().apply {
 }
 
 configure<ApplicationExtension> {
-    namespace = "ua.ztr.bmsmonitor"
+    namespace = "io.github.kolod.ghostbms"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "ua.ztr.bmsmonitor"
+        applicationId = "io.github.kolod.ghostbms"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 37
         versionCode = 1
         versionName = "1.0"
     }
@@ -28,6 +28,12 @@ configure<ApplicationExtension> {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    // Реєструє res/values-*/ мови в locales_config.xml, щоб застосунок з'явився
+    // в системних Налаштування → Мови застосунків (Android 13+).
+    androidResources {
+        generateLocaleConfig = true
     }
 
     compileOptions {

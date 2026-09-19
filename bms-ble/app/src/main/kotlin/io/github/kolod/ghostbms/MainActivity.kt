@@ -1,4 +1,4 @@
-package ua.ztr.bmsmonitor
+package io.github.kolod.ghostbms
 
 import android.Manifest
 import android.bluetooth.BluetoothAdapter
@@ -41,23 +41,24 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
-import ua.ztr.bmsble.BmsConnectionState
-import ua.ztr.bmsmonitor.ui.BmsMonitorTheme
-import ua.ztr.bmsmonitor.ui.CellVoltagesScreen
-import ua.ztr.bmsmonitor.ui.ConnectionBanner
-import ua.ztr.bmsmonitor.ui.DashboardScreen
-import ua.ztr.bmsmonitor.ui.ScanScreen
-import ua.ztr.bmsmonitor.ui.SettingsScreen
+import io.github.kolod.ghostbms.ble.BmsConnectionState
+import io.github.kolod.ghostbms.ui.BmsMonitorTheme
+import io.github.kolod.ghostbms.ui.CellVoltagesScreen
+import io.github.kolod.ghostbms.ui.ConnectionBanner
+import io.github.kolod.ghostbms.ui.DashboardScreen
+import io.github.kolod.ghostbms.ui.ScanScreen
+import io.github.kolod.ghostbms.ui.SettingsScreen
 
-private enum class AppScreen(val title: String) {
-    Dashboard("Дашборд"),
-    Settings("Налаштування"),
-    CellVoltages("Напруги комірок"),
+private enum class AppScreen(val titleRes: Int) {
+    Dashboard(R.string.nav_dashboard),
+    Settings(R.string.nav_settings),
+    CellVoltages(R.string.nav_cell_voltages),
 }
 
 private fun requiredBluetoothPermissions(): Array<String> =
@@ -80,7 +81,7 @@ private fun shareLogFile(context: Context, file: java.io.File) {
         putExtra(Intent.EXTRA_STREAM, uri)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
-    context.startActivity(Intent.createChooser(intent, "Поділитися логом BMS"))
+    context.startActivity(Intent.createChooser(intent, context.getString(R.string.share_log_chooser_title)))
 }
 
 class MainActivity : ComponentActivity() {
@@ -130,7 +131,7 @@ private fun AppRoot(viewModel: BmsViewModel) {
             modifier = Modifier.fillMaxSize().padding(24.dp),
             verticalArrangement = Arrangement.Center,
         ) {
-            Text("Цей пристрій не підтримує Bluetooth.")
+            Text(stringResource(R.string.bluetooth_not_supported))
         }
         return
     }
@@ -140,12 +141,12 @@ private fun AppRoot(viewModel: BmsViewModel) {
             modifier = Modifier.fillMaxSize().padding(24.dp),
             verticalArrangement = Arrangement.Center,
         ) {
-            Text("Bluetooth вимкнено.")
+            Text(stringResource(R.string.bluetooth_disabled))
             Button(
                 onClick = { enableBluetoothLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)) },
                 modifier = Modifier.padding(top = 12.dp),
             ) {
-                Text("Увімкнути Bluetooth")
+                Text(stringResource(R.string.enable_bluetooth))
             }
         }
         return
@@ -174,7 +175,7 @@ private fun AppRoot(viewModel: BmsViewModel) {
                 devices = scanResults,
                 onScanClick = { viewModel.startScan() },
                 onDeviceClick = { viewModel.connect(it) },
-                onDemoClick = if (BuildConfig.DEBUG) ({ viewModel.connectDemo() }) else null,
+                onDemoClick = { viewModel.connectDemo() },
                 modifier = Modifier.padding(padding),
             )
         }
@@ -189,21 +190,21 @@ private fun AppRoot(viewModel: BmsViewModel) {
         drawerContent = {
             ModalDrawerSheet {
                 NavigationDrawerItem(
-                    label = { Text(AppScreen.Dashboard.title) },
+                    label = { Text(stringResource(AppScreen.Dashboard.titleRes)) },
                     icon = { Icon(Icons.Default.Home, contentDescription = null) },
                     selected = screen == AppScreen.Dashboard,
                     onClick = { screen = AppScreen.Dashboard; scope.launch { drawerState.close() } },
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                 )
                 NavigationDrawerItem(
-                    label = { Text(AppScreen.Settings.title) },
+                    label = { Text(stringResource(AppScreen.Settings.titleRes)) },
                     icon = { Icon(Icons.Default.Settings, contentDescription = null) },
                     selected = screen == AppScreen.Settings,
                     onClick = { screen = AppScreen.Settings; scope.launch { drawerState.close() } },
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                 )
                 NavigationDrawerItem(
-                    label = { Text(AppScreen.CellVoltages.title) },
+                    label = { Text(stringResource(AppScreen.CellVoltages.titleRes)) },
                     icon = { Icon(Icons.Default.BatteryFull, contentDescription = null) },
                     selected = screen == AppScreen.CellVoltages,
                     onClick = { screen = AppScreen.CellVoltages; scope.launch { drawerState.close() } },
@@ -279,9 +280,9 @@ private fun PermissionRequestScreen(onRequestClick: () -> Unit) {
         modifier = Modifier.fillMaxSize().padding(24.dp),
         verticalArrangement = Arrangement.Center,
     ) {
-        Text("Для пошуку та підключення до BMS потрібні дозволи Bluetooth.")
+        Text(stringResource(R.string.bluetooth_permission_rationale))
         Button(onClick = onRequestClick, modifier = Modifier.padding(top = 12.dp)) {
-            Text("Надати дозволи")
+            Text(stringResource(R.string.grant_permissions))
         }
     }
 }

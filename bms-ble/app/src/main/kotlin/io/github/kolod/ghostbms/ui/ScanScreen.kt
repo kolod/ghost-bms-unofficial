@@ -1,4 +1,4 @@
-package ua.ztr.bmsmonitor.ui
+package io.github.kolod.ghostbms.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,8 +23,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import ua.ztr.bmsmonitor.ScannedDevice
+import io.github.kolod.ghostbms.R
+import io.github.kolod.ghostbms.ScannedDevice
 
 @Composable
 fun ScanScreen(
@@ -32,8 +34,7 @@ fun ScanScreen(
     devices: List<ScannedDevice>,
     onScanClick: () -> Unit,
     onDeviceClick: (ScannedDevice) -> Unit,
-    /** Не-null лише в debug-збірці — кнопка емуляції підключеного пристрою для перевірки UI. */
-    onDemoClick: (() -> Unit)? = null,
+    onDemoClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
@@ -42,10 +43,10 @@ fun ScanScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Пристрої поблизу", style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.scan_screen_title), style = MaterialTheme.typography.titleLarge)
             Button(onClick = onScanClick, enabled = !isScanning) {
                 Icon(Icons.AutoMirrored.Filled.BluetoothSearching, contentDescription = null)
-                Text(if (isScanning) "  Сканування…" else "  Сканувати")
+                Text("  " + stringResource(if (isScanning) R.string.scan_scanning_label else R.string.scan_button))
             }
         }
 
@@ -60,7 +61,7 @@ fun ScanScreen(
 
         if (devices.isEmpty() && !isScanning) {
             Text(
-                "Натисніть \"Сканувати\", щоб знайти BMS. Переконайтесь, що Bluetooth увімкнено, а BMS живиться.",
+                stringResource(R.string.scan_hint),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(top = 24.dp),
             )
@@ -82,11 +83,9 @@ fun ScanScreen(
             }
         }
 
-        if (onDemoClick != null) {
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-            OutlinedButton(onClick = onDemoClick, modifier = Modifier.fillMaxWidth()) {
-                Text("🧪 Демо-режим (емуляція підключеного пристрою)")
-            }
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        OutlinedButton(onClick = onDemoClick, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.demo_mode_button))
         }
     }
 }

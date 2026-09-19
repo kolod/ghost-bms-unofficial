@@ -1,4 +1,4 @@
-package ua.ztr.bmsmonitor.ui
+package io.github.kolod.ghostbms.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -36,14 +37,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
-import ua.ztr.bmsble.BmsConnectionState
-import ua.ztr.bmsble.BmsState
-import ua.ztr.bmsble.BmsStatusFlags
-import ua.ztr.bmsble.ProtectionCode
+import io.github.kolod.ghostbms.R
+import io.github.kolod.ghostbms.ble.BmsConnectionState
+import io.github.kolod.ghostbms.ble.BmsState
+import io.github.kolod.ghostbms.ble.BmsStatusFlags
+import io.github.kolod.ghostbms.ble.ProtectionCode
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -71,19 +74,19 @@ fun DashboardScreen(
             modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item { Section("Живі показники") { LiveReadingsCard(state) } }
-            item { Section("Основні налаштування") { ProtectionSettingsEchoCard(state) } }
-            item { Section("Комірки") { CellStatsCard(state) } }
-            item { Section("Статус і захист") { StatusCard(state) } }
-            item { Section("Ємність і цикли") { CapacityCard(state) } }
+            item { Section(stringResource(R.string.section_live_readings)) { LiveReadingsCard(state) } }
+            item { Section(stringResource(R.string.section_basic_settings_echo)) { ProtectionSettingsEchoCard(state) } }
+            item { Section(stringResource(R.string.section_cells)) { CellStatsCard(state) } }
+            item { Section(stringResource(R.string.section_status_protection)) { StatusCard(state) } }
+            item { Section(stringResource(R.string.section_capacity_cycles)) { CapacityCard(state) } }
             state.settings?.let { settings ->
-                item { Section("Налаштування") { SettingsCard(settings) } }
+                item { Section(stringResource(R.string.section_settings)) { SettingsCard(settings) } }
             }
             item {
-                Section("Керування") {
+                Section(stringResource(R.string.section_control)) {
                     Column {
                         SwitchRow(
-                            label = "Батарея підключена",
+                            label = stringResource(R.string.switch_battery_connected),
                             checked = state.status?.channelOpen,
                             onCheckedChange = onBatteryEnabledChange,
                             // Вмикання йде через пускове реле з витримкою часу перед основним —
@@ -94,12 +97,12 @@ fun DashboardScreen(
                                 .coerceIn(3000L, 15000L),
                         )
                         SwitchRow(
-                            label = "Балансування",
+                            label = stringResource(R.string.switch_balancing),
                             checked = state.status?.isBalancing,
                             onCheckedChange = onAutoBalance,
                         )
                         SwitchRow(
-                            label = "Екран",
+                            label = stringResource(R.string.switch_screen),
                             checked = state.screenOff?.let { !it },
                             onCheckedChange = { on -> if (on) onScreenOn() else onScreenOff() },
                         )
@@ -108,7 +111,7 @@ fun DashboardScreen(
             }
             if (onShareLog != null) {
                 item {
-                    Section("Діагностика") {
+                    Section(stringResource(R.string.section_diagnostics)) {
                         DiagnosticsPanel(logLines = logLines, onShareLog = onShareLog)
                     }
                 }
@@ -130,14 +133,14 @@ internal fun ConnectionBanner(
     onDisconnect: () -> Unit,
 ) {
     val (label, color) = when (state) {
-        BmsConnectionState.DISCONNECTED -> "Відключено" to ColorAlarm
-        BmsConnectionState.CONNECTING -> "Підключення…" to ColorWarning
-        BmsConnectionState.DISCOVERING_SERVICES -> "Пошук сервісів…" to ColorWarning
-        BmsConnectionState.SUBSCRIBING -> "Підписка на дані…" to ColorWarning
-        BmsConnectionState.READY -> "Підключено" to ColorOk
-        BmsConnectionState.FAILED -> "Помилка з'єднання" to ColorAlarm
+        BmsConnectionState.DISCONNECTED -> stringResource(R.string.connection_state_disconnected) to ColorAlarm
+        BmsConnectionState.CONNECTING -> stringResource(R.string.connection_state_connecting) to ColorWarning
+        BmsConnectionState.DISCOVERING_SERVICES -> stringResource(R.string.connection_state_discovering) to ColorWarning
+        BmsConnectionState.SUBSCRIBING -> stringResource(R.string.connection_state_subscribing) to ColorWarning
+        BmsConnectionState.READY -> stringResource(R.string.connection_state_ready) to ColorOk
+        BmsConnectionState.FAILED -> stringResource(R.string.connection_state_failed) to ColorAlarm
     }
-    Column {
+    Column(modifier = Modifier.statusBarsPadding()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -147,14 +150,14 @@ internal fun ConnectionBanner(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onMenuClick) {
-                    Icon(Icons.Default.Menu, contentDescription = "Меню")
+                    Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.menu_content_description))
                 }
                 Column {
-                    Text(deviceName ?: "BMS", style = MaterialTheme.typography.titleLarge)
+                    Text(deviceName ?: stringResource(R.string.default_device_name), style = MaterialTheme.typography.titleLarge)
                     Text(label, style = MaterialTheme.typography.bodyMedium, color = color)
                 }
             }
-            Button(onClick = onDisconnect) { Text("Відключити") }
+            Button(onClick = onDisconnect) { Text(stringResource(R.string.disconnect_button)) }
         }
         HorizontalDivider()
     }
@@ -166,9 +169,12 @@ private fun DiagnosticsPanel(logLines: List<String>, onShareLog: () -> Unit) {
     Column {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = { expanded = !expanded }) {
-                Text(if (expanded) "Сховати лог" else "Лог у реальному часі (${logLines.size})")
+                Text(
+                    if (expanded) stringResource(R.string.log_hide)
+                    else stringResource(R.string.log_show_realtime, logLines.size),
+                )
             }
-            OutlinedButton(onClick = onShareLog) { Text("Поділитися логом") }
+            OutlinedButton(onClick = onShareLog) { Text(stringResource(R.string.share_log_button)) }
         }
         if (expanded) {
             val listState = rememberLazyListState()
@@ -270,9 +276,9 @@ private fun SwitchRow(
 /** Сторінка 1, offset 13-18 — жива напруга/струм/потужність батареї. Підтверджено на пристрої. */
 @Composable
 private fun LiveReadingsCard(state: BmsState) {
-    MetricRow("Напруга", fmt(state.liveVoltage, "В"))
-    MetricRow("Струм", fmt(state.liveCurrent, "А"))
-    MetricRow("Потужність", fmt(state.livePowerKw, "кВт"))
+    MetricRow(stringResource(R.string.metric_voltage), fmt(state.liveVoltage, stringResource(R.string.unit_v)))
+    MetricRow(stringResource(R.string.metric_current), fmt(state.liveCurrent, stringResource(R.string.unit_a)))
+    MetricRow(stringResource(R.string.metric_power), fmt(state.livePowerKw, stringResource(R.string.unit_kw)))
 }
 
 /**
@@ -281,21 +287,21 @@ private fun LiveReadingsCard(state: BmsState) {
  */
 @Composable
 private fun ProtectionSettingsEchoCard(state: BmsState) {
-    MetricRow("Напруга відсічки розряду", fmt(state.dischargeCutoffVoltagePerCell, "В/комірку"))
-    MetricRow("Номінальний струм реле", fmt(state.dischargeProtectionCurrent, "А"))
-    MetricRow("Максимальна ємність", fmt(state.maxBatteryCapacityAh, "Аг"))
-    MetricRow("Кількість комірок", state.cellCount?.toString() ?: "—")
-    MetricRow("Напруга відсічки заряду", fmt(state.chargeCutoffVoltagePerCell, "В/комірку"))
-    MetricRow("Уставка макс. температури", fmt(state.highTemperatureProtectionThreshold, "°C"))
+    MetricRow(stringResource(R.string.metric_discharge_cutoff_voltage), fmt(state.dischargeCutoffVoltagePerCell, stringResource(R.string.unit_v_per_cell)))
+    MetricRow(stringResource(R.string.metric_rated_relay_current), fmt(state.dischargeProtectionCurrent, stringResource(R.string.unit_a)))
+    MetricRow(stringResource(R.string.metric_max_capacity), fmt(state.maxBatteryCapacityAh, stringResource(R.string.unit_ah)))
+    MetricRow(stringResource(R.string.metric_cell_count), state.cellCount?.toString() ?: stringResource(R.string.value_missing))
+    MetricRow(stringResource(R.string.metric_charge_cutoff_voltage), fmt(state.chargeCutoffVoltagePerCell, stringResource(R.string.unit_v_per_cell)))
+    MetricRow(stringResource(R.string.metric_max_temp_threshold), fmt(state.highTemperatureProtectionThreshold, stringResource(R.string.unit_c)))
 }
 
 @Composable
 private fun CellStatsCard(state: BmsState) {
-    MetricRow("Мін. напруга комірки", fmt(state.minCellVoltage, "В", 3))
-    MetricRow("Макс. напруга комірки", fmt(state.maxCellVoltage, "В", 3))
-    MetricRow("Різниця (макс-мін)", fmt(state.cellVoltageDiff, "В", 3))
-    MetricRow("Напруга старту балансування", fmt(state.balanceStartVoltage, "В"))
-    MetricRow("Опорна напруга балансування", fmt(state.balanceBaselineVoltage, "В", 3))
+    MetricRow(stringResource(R.string.metric_min_cell_voltage), fmt(state.minCellVoltage, stringResource(R.string.unit_v), 3))
+    MetricRow(stringResource(R.string.metric_max_cell_voltage), fmt(state.maxCellVoltage, stringResource(R.string.unit_v), 3))
+    MetricRow(stringResource(R.string.metric_voltage_diff), fmt(state.cellVoltageDiff, stringResource(R.string.unit_v), 3))
+    MetricRow(stringResource(R.string.metric_balance_start_voltage), fmt(state.balanceStartVoltage, stringResource(R.string.unit_v)))
+    MetricRow(stringResource(R.string.metric_balance_baseline_voltage), fmt(state.balanceBaselineVoltage, stringResource(R.string.unit_v), 3))
 }
 
 @Composable
@@ -303,16 +309,16 @@ private fun StatusCard(state: BmsState) {
     val status = state.status
     if (status != null) {
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(bottom = 8.dp)) {
-            if (status.isCharging) StatusChip("Заряджається", ColorOk)
-            if (status.isBalancing) StatusChip("Балансування", ColorOk)
-            if (status.channelOpen) StatusChip("Коло увімкнено", ColorOk)
+            if (status.isCharging) StatusChip(stringResource(R.string.status_charging), ColorOk)
+            if (status.isBalancing) StatusChip(stringResource(R.string.status_balancing), ColorOk)
+            if (status.channelOpen) StatusChip(stringResource(R.string.status_channel_open), ColorOk)
         }
         val alarms = buildList {
-            if (status.alarmLowVoltage) add("Напруга нижче порогу")
-            if (status.alarmOverCurrent) add("Струм вище порогу")
-            if (status.alarmWrongCellCount) add("Невірна кількість комірок")
-            if (status.alarmHighVoltage) add("Напруга вище порогу")
-            if (status.alarmHighTemperature) add("Температура вище порогу")
+            if (status.alarmLowVoltage) add(stringResource(R.string.alarm_low_voltage))
+            if (status.alarmOverCurrent) add(stringResource(R.string.alarm_over_current))
+            if (status.alarmWrongCellCount) add(stringResource(R.string.alarm_wrong_cell_count))
+            if (status.alarmHighVoltage) add(stringResource(R.string.alarm_high_voltage))
+            if (status.alarmHighTemperature) add(stringResource(R.string.alarm_high_temperature))
         }
         if (alarms.isNotEmpty()) {
             Column(modifier = Modifier.padding(bottom = 8.dp)) {
@@ -320,17 +326,22 @@ private fun StatusCard(state: BmsState) {
             }
         }
     }
-    MetricRow("Код захисту", protectionLabel(state.protectionCode))
+    MetricRow(stringResource(R.string.metric_protection_code), protectionLabel(state.protectionCode))
     if ((state.triggeringCellNumber ?: 0) > 0) {
-        MetricRow("Комірка, що спричинила захист", "№${state.triggeringCellNumber}")
+        MetricRow(stringResource(R.string.label_triggering_cell), stringResource(R.string.label_cell_number, state.triggeringCellNumber!!))
     }
-    MetricRow("Реле заряду", boolLabel(state.chargeMosOn, "увімк.", "вимк."))
-    MetricRow("Реле розряду", boolLabel(state.dischargeMosOn, "увімк.", "вимк."))
-    MetricRow("Температура реле (MOSFET)", fmt(state.mosTemperatureC, "°C"))
-    MetricRow("Батарея увімкнена за замовчуванням", boolLabel(state.defaultChannelOn, "увімк.", "вимк."))
-    MetricRow("Екран", boolLabel(state.screenOff, "вимкнено", "увімкнено"))
-    MetricRow("Напруга відновлення заряду", fmt(state.chargeRecoveryVoltage, "В"))
-    MetricRow("Напруга відновлення розряду", fmt(state.dischargeRecoveryVoltage, "В"))
+    val onLabel = stringResource(R.string.bool_on_short)
+    val offLabel = stringResource(R.string.bool_off_short)
+    MetricRow(stringResource(R.string.metric_charge_relay), boolLabel(state.chargeMosOn, onLabel, offLabel))
+    MetricRow(stringResource(R.string.metric_discharge_relay), boolLabel(state.dischargeMosOn, onLabel, offLabel))
+    MetricRow(stringResource(R.string.metric_relay_temperature), fmt(state.mosTemperatureC, stringResource(R.string.unit_c)))
+    MetricRow(stringResource(R.string.metric_default_channel_on), boolLabel(state.defaultChannelOn, onLabel, offLabel))
+    MetricRow(
+        stringResource(R.string.metric_screen_state),
+        boolLabel(state.screenOff, stringResource(R.string.screen_state_off), stringResource(R.string.screen_state_on)),
+    )
+    MetricRow(stringResource(R.string.metric_charge_recovery_voltage), fmt(state.chargeRecoveryVoltage, stringResource(R.string.unit_v)))
+    MetricRow(stringResource(R.string.metric_discharge_recovery_voltage), fmt(state.dischargeRecoveryVoltage, stringResource(R.string.unit_v)))
 }
 
 @Composable
@@ -345,22 +356,42 @@ private fun StatusChip(text: String, color: Color) {
 
 @Composable
 private fun CapacityCard(state: BmsState) {
-    MetricRow("Використана ємність", fmt(state.usedCapacityAh, "Аг"))
-    MetricRow("Кумулятивна розряджена ємність", fmt(state.cumulativeDischargeCapacityAh, "Аг"))
-    MetricRow("Кумулятивні цикли (розрах.)", state.cumulativeCycles?.let { "%.2f".format(it) } ?: "—")
+    MetricRow(stringResource(R.string.metric_used_capacity), fmt(state.usedCapacityAh, stringResource(R.string.unit_ah)))
+    MetricRow(stringResource(R.string.metric_cumulative_discharge), fmt(state.cumulativeDischargeCapacityAh, stringResource(R.string.unit_ah)))
+    MetricRow(
+        stringResource(R.string.metric_cumulative_cycles),
+        state.cumulativeCycles?.let { "%.2f".format(it) } ?: stringResource(R.string.value_missing),
+    )
 }
 
 @Composable
-private fun SettingsCard(settings: ua.ztr.bmsble.BmsSettings) {
-    MetricRow("Затримка передзаряду", "${settings.preChargeDelaySec} с")
-    MetricRow("Поріг різниці напруг комірок", "%.2f В".format(settings.cellVoltageDiffThreshold))
-    MetricRow("Автоскидання ємності", if (settings.autoResetCapacity) "увімк." else "вимк.")
-    MetricRow("Поріг низької температури", settings.lowTemperatureThreshold.toString())
-    MetricRow("Тип датчика струму", settings.currentSensorType.toString())
+private fun SettingsCard(settings: io.github.kolod.ghostbms.ble.BmsSettings) {
+    MetricRow(stringResource(R.string.label_precharge_delay), stringResource(R.string.value_seconds, settings.preChargeDelaySec))
+    MetricRow(stringResource(R.string.label_cell_voltage_diff_threshold), stringResource(R.string.value_volts_2dp, settings.cellVoltageDiffThreshold))
+    MetricRow(
+        stringResource(R.string.label_auto_reset_capacity),
+        stringResource(if (settings.autoResetCapacity) R.string.bool_on_short else R.string.bool_off_short),
+    )
+    MetricRow(stringResource(R.string.dashboard_low_temp_threshold), settings.lowTemperatureThreshold.toString())
+    MetricRow(stringResource(R.string.label_current_sensor_type), settings.currentSensorType.toString())
 }
 
-private fun protectionLabel(code: ProtectionCode?): String =
-    if (code == null) "—" else code.description
+@Composable
+private fun protectionLabel(code: ProtectionCode?): String = when (code) {
+    null -> stringResource(R.string.value_missing)
+    ProtectionCode.NONE -> stringResource(R.string.protection_none)
+    ProtectionCode.OVER_CURRENT -> stringResource(R.string.protection_over_current)
+    ProtectionCode.OVER_DISCHARGE -> stringResource(R.string.protection_over_discharge)
+    ProtectionCode.OVER_CHARGE -> stringResource(R.string.protection_over_charge)
+    ProtectionCode.OVER_TEMPERATURE -> stringResource(R.string.protection_over_temperature)
+    ProtectionCode.WRONG_CELL_COUNT -> stringResource(R.string.protection_wrong_cell_count)
+    ProtectionCode.CHARGE_MOSFET_FAULT -> stringResource(R.string.protection_charge_mosfet_fault)
+    ProtectionCode.DISCHARGE_MOSFET_FAULT -> stringResource(R.string.protection_discharge_mosfet_fault)
+    ProtectionCode.LOW_VOLTAGE_SHUTDOWN -> stringResource(R.string.protection_low_voltage_shutdown)
+    ProtectionCode.CELL_VOLTAGE_DIFF -> stringResource(R.string.protection_cell_voltage_diff)
+    ProtectionCode.LOW_TEMPERATURE -> stringResource(R.string.protection_low_temperature)
+    ProtectionCode.UNKNOWN -> stringResource(R.string.protection_unknown)
+}
 
 private fun boolLabel(value: Boolean?, whenTrue: String, whenFalse: String): String = when (value) {
     true -> whenTrue
@@ -368,8 +399,9 @@ private fun boolLabel(value: Boolean?, whenTrue: String, whenFalse: String): Str
     null -> "—"
 }
 
+@Composable
 internal fun fmt(value: Double?, unit: String, decimals: Int = 2): String =
-    if (value == null) "—" else "%.${decimals}f %s".format(value, unit)
+    if (value == null) stringResource(R.string.value_missing) else "%.${decimals}f %s".format(value, unit)
 
 private fun formatTime(timestampMs: Long): String =
     SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(timestampMs))
@@ -379,7 +411,7 @@ private fun formatTime(timestampMs: Long): String =
 internal fun LastUpdatedRow(lastUpdated: Long) {
     if (lastUpdated <= 0) return
     Text(
-        "Останнє оновлення: ${formatTime(lastUpdated)}",
+        stringResource(R.string.last_updated, formatTime(lastUpdated)),
         style = MaterialTheme.typography.bodySmall,
         modifier = Modifier.padding(vertical = 8.dp),
     )

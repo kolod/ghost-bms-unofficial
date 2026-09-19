@@ -1,3 +1,180 @@
 <resources>
-    <string name="app_name">BMS Монітор</string>
+    <string name="app_name">Ghost BMS (unofficial)</string>
+
+    <!-- MainActivity: навігація, дозволи, Bluetooth -->
+    <string name="nav_dashboard">Дашборд</string>
+    <string name="nav_settings">Налаштування</string>
+    <string name="nav_cell_voltages">Напруги комірок</string>
+    <string name="bluetooth_not_supported">Цей пристрій не підтримує Bluetooth.</string>
+    <string name="bluetooth_disabled">Bluetooth вимкнено.</string>
+    <string name="enable_bluetooth">Увімкнути Bluetooth</string>
+    <string name="share_log_chooser_title">Поділитися логом BMS</string>
+    <string name="bluetooth_permission_rationale">Для пошуку та підключення до BMS потрібні дозволи Bluetooth.</string>
+    <string name="grant_permissions">Надати дозволи</string>
+
+    <!-- ScanScreen -->
+    <string name="scan_screen_title">Пристрої поблизу</string>
+    <string name="scan_scanning_label">Сканування…</string>
+    <string name="scan_button">Сканувати</string>
+    <string name="scan_hint">Натисніть \"Сканувати\", щоб знайти BMS. Переконайтесь, що Bluetooth увімкнено, а BMS живиться.</string>
+    <string name="demo_mode_button">Демо-режим (емуляція підключеного пристрою)</string>
+
+    <!-- DashboardScreen: секції та керування -->
+    <string name="section_live_readings">Живі показники</string>
+    <string name="section_basic_settings_echo">Основні налаштування</string>
+    <string name="section_cells">Комірки</string>
+    <string name="section_status_protection">Статус і захист</string>
+    <string name="section_capacity_cycles">Ємність і цикли</string>
+    <string name="section_settings">Налаштування</string>
+    <string name="section_control">Керування</string>
+    <string name="section_diagnostics">Діагностика</string>
+
+    <string name="switch_battery_connected">Батарея підключена</string>
+    <string name="switch_balancing">Балансування</string>
+    <string name="switch_screen">Екран</string>
+
+    <string name="menu_content_description">Меню</string>
+    <string name="default_device_name">BMS</string>
+    <string name="disconnect_button">Відключити</string>
+
+    <string name="connection_state_disconnected">Відключено</string>
+    <string name="connection_state_connecting">Підключення…</string>
+    <string name="connection_state_discovering">Пошук сервісів…</string>
+    <string name="connection_state_subscribing">Підписка на дані…</string>
+    <string name="connection_state_ready">Підключено</string>
+    <string name="connection_state_failed">Помилка з\'єднання</string>
+
+    <string name="log_hide">Сховати лог</string>
+    <string name="log_show_realtime">Лог у реальному часі (%1$d)</string>
+    <string name="share_log_button">Поділитися логом</string>
+
+    <string name="metric_voltage">Напруга</string>
+    <string name="metric_current">Струм</string>
+    <string name="metric_power">Потужність</string>
+
+    <string name="metric_discharge_cutoff_voltage">Напруга відсічки розряду</string>
+    <string name="metric_rated_relay_current">Номінальний струм реле</string>
+    <string name="metric_max_capacity">Максимальна ємність</string>
+    <string name="metric_cell_count">Кількість комірок</string>
+    <string name="metric_charge_cutoff_voltage">Напруга відсічки заряду</string>
+    <string name="metric_max_temp_threshold">Уставка макс. температури</string>
+
+    <string name="metric_min_cell_voltage">Мін. напруга комірки</string>
+    <string name="metric_max_cell_voltage">Макс. напруга комірки</string>
+    <string name="metric_voltage_diff">Різниця (макс-мін)</string>
+    <string name="metric_balance_start_voltage">Напруга старту балансування</string>
+    <string name="metric_balance_baseline_voltage">Опорна напруга балансування</string>
+
+    <string name="status_charging">Заряджається</string>
+    <string name="status_balancing">Балансування</string>
+    <string name="status_channel_open">Коло увімкнено</string>
+    <string name="alarm_low_voltage">Напруга нижче порогу</string>
+    <string name="alarm_over_current">Струм вище порогу</string>
+    <string name="alarm_wrong_cell_count">Невірна кількість комірок</string>
+    <string name="alarm_high_voltage">Напруга вище порогу</string>
+    <string name="alarm_high_temperature">Температура вище порогу</string>
+
+    <string name="metric_protection_code">Код захисту</string>
+    <string name="label_triggering_cell">Комірка, що спричинила захист</string>
+    <string name="label_cell_number">№%1$d</string>
+    <string name="metric_charge_relay">Реле заряду</string>
+    <string name="metric_discharge_relay">Реле розряду</string>
+    <string name="metric_relay_temperature">Температура реле (MOSFET)</string>
+    <string name="metric_default_channel_on">Батарея увімкнена за замовчуванням</string>
+    <string name="metric_screen_state">Екран</string>
+    <string name="metric_charge_recovery_voltage">Напруга відновлення заряду</string>
+    <string name="metric_discharge_recovery_voltage">Напруга відновлення розряду</string>
+
+    <string name="bool_on_short">увімк.</string>
+    <string name="bool_off_short">вимк.</string>
+    <string name="screen_state_off">вимкнено</string>
+    <string name="screen_state_on">увімкнено</string>
+    <string name="value_missing">—</string>
+
+    <string name="metric_used_capacity">Використана ємність</string>
+    <string name="metric_cumulative_discharge">Кумулятивна розряджена ємність</string>
+    <string name="metric_cumulative_cycles">Кумулятивні цикли (розрах.)</string>
+
+    <string name="label_precharge_delay">Затримка передзаряду</string>
+    <string name="value_seconds">%1$d с</string>
+    <string name="label_cell_voltage_diff_threshold">Поріг різниці напруг комірок</string>
+    <string name="value_volts_2dp">%1$.2f В</string>
+    <string name="label_auto_reset_capacity">Автоскидання ємності</string>
+    <string name="dashboard_low_temp_threshold">Поріг низької температури</string>
+    <string name="label_current_sensor_type">Тип датчика струму</string>
+
+    <string name="last_updated">Останнє оновлення: %1$s</string>
+
+    <!-- Одиниці вимірювання -->
+    <string name="unit_v">В</string>
+    <string name="unit_a">А</string>
+    <string name="unit_kw">кВт</string>
+    <string name="unit_ah">Аг</string>
+    <string name="unit_v_per_cell">В/комірку</string>
+    <string name="unit_c">°C</string>
+    <string name="unit_s">с</string>
+    <string name="unit_pcs">шт</string>
+
+    <!-- Коди захисту (io.github.kolod.ghostbms.ble.ProtectionCode) -->
+    <string name="protection_none">Немає</string>
+    <string name="protection_over_current">Перевищення струму</string>
+    <string name="protection_over_discharge">Перерозряд</string>
+    <string name="protection_over_charge">Перезаряд</string>
+    <string name="protection_over_temperature">Перегрів</string>
+    <string name="protection_wrong_cell_count">Невірна кількість комірок</string>
+    <string name="protection_charge_mosfet_fault">Несправність MOSFET заряду</string>
+    <string name="protection_discharge_mosfet_fault">Несправність MOSFET розряду</string>
+    <string name="protection_low_voltage_shutdown">Просідання живлення хоста</string>
+    <string name="protection_cell_voltage_diff">Захист по різниці напруг комірок</string>
+    <string name="protection_low_temperature">Захист від низької температури</string>
+    <string name="protection_unknown">Невідомий код</string>
+
+    <!-- CellVoltagesScreen -->
+    <string name="bank_a_title">Банк A</string>
+    <string name="bank_b_title">Банк B</string>
+    <string name="temp_modules_title">Температура модулів</string>
+    <string name="label_module_number">Модуль %1$d</string>
+    <string name="temp_modules_unconfirmed">Модулі %1$d-%2$d: джерело даних у протоколі ще не підтверджено (TODO)</string>
+
+    <!-- SettingsScreen -->
+    <string name="settings_disclaimer">⚠ Формули запису для більшості полів нижче не перевірені на реальному пристрої (гіпотеза, не HCI-підтверджена). Після кожної зміни звіряйте показник у штатному застосунку, перш ніж довіряти наступному полю.</string>
+
+    <string name="section_voltages">Напруги</string>
+    <string name="label_low_voltage_host_shutdown">Низька напруга відключення хоста</string>
+
+    <string name="section_current_temperature">Струм і температура</string>
+    <string name="settings_overtemp_protection">Захист від перегріву</string>
+    <string name="settings_low_temp_protection">Захист від низької температури</string>
+    <string name="label_fan_start_temp">Температура старту вентилятора</string>
+    <string name="label_heater_start_temp">Температура старту нагрівача</string>
+
+    <string name="section_capacity_cells">Ємність і комірки</string>
+
+    <string name="section_delays">Затримки</string>
+    <string name="label_host_shutdown_delay">Затримка відключення хоста</string>
+
+    <string name="section_default_channel">Канал за замовчуванням</string>
+
+    <string name="section_engineering">Інженерні (захищені паролем у штатному застосунку)</string>
+    <string name="label_current_sensor_type_engineering">🔧 Тип датчика струму</string>
+    <string name="label_can_send_id">🔧 CAN send ID</string>
+    <string name="label_can_receive_id">🔧 CAN receive ID</string>
+
+    <string name="section_reset">Скидання</string>
+    <string name="reset_disclaimer">Точна ціль кожної кнопки не підтверджена остаточно — можливо, дублюють одна одну.</string>
+    <string name="reset_action9_button">Скинути (0x09)</string>
+    <string name="reset_discharge_capacity_button">Скинути розряджену ємність (0x12)</string>
+    <string name="reset_cycle_counter_button">Скинути цикли — CLR (0x13)</string>
+
+    <string name="value_missing_tap_to_set">— (тап, щоб задати)</string>
+    <string name="dialog_unconfirmed_warning">Формула запису не підтверджена на пристрої — гіпотеза. Звірте показник після надсилання.</string>
+    <string name="field_generic_value_label">значення</string>
+    <string name="dialog_limits">Межі: %1$s–%2$s %3$s</string>
+    <string name="dialog_submit_button">Надіслати</string>
+    <string name="dialog_cancel_button">Скасувати</string>
+
+    <!-- BmsViewModel: демо-режим, сканування -->
+    <string name="demo_mode_device_name">Демо-режим</string>
+    <string name="demo_mode_log_message">Демо-режим: дані згенеровано локально, реального BLE-з\'єднання немає.</string>
+    <string name="unnamed_device">(без імені)</string>
 </resources>

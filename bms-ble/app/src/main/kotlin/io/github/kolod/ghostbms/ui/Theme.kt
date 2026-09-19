@@ -1,4 +1,4 @@
-package ua.ztr.bmsmonitor.ui
+package io.github.kolod.ghostbms.ui
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme

@@ -1,4 +1,4 @@
-package ua.ztr.bmsmonitor
+package io.github.kolod.ghostbms
 
 import android.app.Application
 import android.bluetooth.BluetoothDevice
@@ -16,11 +16,11 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import ua.ztr.bmsble.BmsBleClient
-import ua.ztr.bmsble.BmsCommands
-import ua.ztr.bmsble.BmsConnection
-import ua.ztr.bmsble.BmsConnectionState
-import ua.ztr.bmsble.BmsState
+import io.github.kolod.ghostbms.ble.BmsBleClient
+import io.github.kolod.ghostbms.ble.BmsCommands
+import io.github.kolod.ghostbms.ble.BmsConnection
+import io.github.kolod.ghostbms.ble.BmsConnectionState
+import io.github.kolod.ghostbms.ble.BmsState
 
 /** UI-модель одного знайденого пристрою (адреса, а не сам [BluetoothDevice], зручніше для Compose-стану). */
 data class ScannedDevice(
@@ -66,7 +66,7 @@ class BmsViewModel(application: Application) : AndroidViewModel(application) {
         _isScanning.value = true
         scanJob = client.scan(timeoutMs = 12_000)
             .onEach { device ->
-                val name = device.name ?: "(без імені)"
+                val name = device.name ?: getApplication<Application>().getString(R.string.unnamed_device)
                 _scanResults.update { it + ScannedDevice(name, device.address, device) }
             }
             .onCompletion { _isScanning.value = false }
@@ -96,8 +96,7 @@ class BmsViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * Емулює підключений пристрій без реального BLE — для перевірки UI в debug-збірці
-     * (кнопка "Демо-режим" на екрані сканування, показується лише коли [BuildConfig.DEBUG]).
+     * Емулює підключений пристрій без реального BLE (кнопка "Демо-режим" на екрані сканування).
      * Дані генеруються локально ([DemoBmsData]) і плавно змінюються, щоб імітувати живий потік.
      */
     fun connectDemo() {
@@ -106,10 +105,11 @@ class BmsViewModel(application: Application) : AndroidViewModel(application) {
         connection = null
         stopDemo()
 
+        val app = getApplication<Application>()
         _bmsState.value = BmsState()
-        _connectedDeviceName.value = "🧪 Демо-режим"
+        _connectedDeviceName.value = app.getString(R.string.demo_mode_device_name)
         _logFile.value = null
-        _logLines.value = listOf("Демо-режим: дані згенеровано локально, реального BLE-з'єднання немає.")
+        _logLines.value = listOf(app.getString(R.string.demo_mode_log_message))
 
         demoJob = viewModelScope.launch {
             _connectionState.value = BmsConnectionState.CONNECTING
@@ -122,7 +122,8 @@ class BmsViewModel(application: Application) : AndroidViewModel(application) {
 
             var tick = 0
             while (isActive) {
-                _bmsState.value = DemoBmsData.state(tick)
+                val currentCellCount = _bmsState.value.cellCount ?: DemoBmsData.DEFAULT_CELL_COUNT
+                _bmsState.value = DemoBmsData.state(tick, currentCellCount)
                 tick++
                 delay(1000)
             }
@@ -161,7 +162,12 @@ class BmsViewModel(application: Application) : AndroidViewModel(application) {
     fun setDischargeCutoffVoltage(volts: Double) = send(BmsCommands.dischargeCutoffVoltage(volts))
     fun setDischargeProtectionCurrent(amps: Double) = send(BmsCommands.dischargeProtectionCurrent(amps))
     fun setMaxBatteryCapacityAh(ah: Double) = send(BmsCommands.maxBatteryCapacityAh(ah))
-    fun setTotalCellCount(count: Int) = send(BmsCommands.totalCellCount(count))
+    fun setTotalCellCount(count: Int) {
+        send(BmsCommands.totalCellCount(count))
+        if (connection == null) {
+            _bmsState.value = _bmsState.value.copy(cellCount = count)
+        }
+    }
     fun setChargeCutoffVoltage(volts: Double) = send(BmsCommands.chargeCutoffVoltage(volts))
     fun setHighTemperatureProtection(celsius: Double) = send(BmsCommands.highTemperatureProtection(celsius))
     fun setChargeRecoveryVoltage(volts: Double) = send(BmsCommands.chargeRecoveryVoltage(volts))

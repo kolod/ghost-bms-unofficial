@@ -1,4 +1,4 @@
-package ua.ztr.bmsmonitor.ui
+package io.github.kolod.ghostbms.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -25,10 +25,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import java.util.Locale
-import ua.ztr.bmsble.BmsState
+import io.github.kolod.ghostbms.R
+import io.github.kolod.ghostbms.ble.BmsState
 
 /**
  * Екран налаштувань BMS (аналог вікна1/窗口1 штатного застосунку). Формули запису для
@@ -80,9 +82,7 @@ fun SettingsScreen(
                     colors = CardDefaults.cardColors(containerColor = ColorWarning.copy(alpha = 0.12f)),
                 ) {
                     Text(
-                        "⚠ Формули запису для більшості полів нижче не перевірені на реальному пристрої " +
-                            "(гіпотеза, не HCI-підтверджена). Після кожної зміни звіряйте показник у штатному " +
-                            "застосунку, перш ніж довіряти наступному полю.",
+                        stringResource(R.string.settings_disclaimer),
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(12.dp),
                     )
@@ -90,67 +90,71 @@ fun SettingsScreen(
             }
 
             item {
-                Section("Напруги") {
+                val unitV = stringResource(R.string.unit_v)
+                Section(stringResource(R.string.section_voltages)) {
                     EditableSettingRow(
-                        "Напруга відсічки розряду", "В", state.dischargeCutoffVoltagePerCell, 2, 0.01, 5.00, false,
+                        stringResource(R.string.metric_discharge_cutoff_voltage), unitV, state.dischargeCutoffVoltagePerCell, 2, 0.01, 5.00, false,
                     ) { onDischargeCutoffVoltage(it) }
                     EditableSettingRow(
-                        "Напруга відсічки заряду", "В", state.chargeCutoffVoltagePerCell, 2, 0.01, 5.00, false,
+                        stringResource(R.string.metric_charge_cutoff_voltage), unitV, state.chargeCutoffVoltagePerCell, 2, 0.01, 5.00, false,
                     ) { onChargeCutoffVoltage(it) }
                     EditableSettingRow(
-                        "Напруга відновлення заряду", "В", state.chargeRecoveryVoltage, 2, 0.01, 5.00, true,
+                        stringResource(R.string.metric_charge_recovery_voltage), unitV, state.chargeRecoveryVoltage, 2, 0.01, 5.00, true,
                     ) { onChargeRecoveryVoltage(it) }
                     EditableSettingRow(
-                        "Напруга відновлення розряду", "В", state.dischargeRecoveryVoltage, 2, 0.01, 5.00, true,
+                        stringResource(R.string.metric_discharge_recovery_voltage), unitV, state.dischargeRecoveryVoltage, 2, 0.01, 5.00, true,
                     ) { onDischargeRecoveryVoltage(it) }
                     EditableSettingRow(
-                        "Низька напруга відключення хоста", "В", state.lowVoltageHostShutdownVoltage, 2, 0.01, 5.00, true,
+                        stringResource(R.string.label_low_voltage_host_shutdown), unitV, state.lowVoltageHostShutdownVoltage, 2, 0.01, 5.00, true,
                     ) { onLowVoltageHostShutdown(it) }
                     EditableSettingRow(
-                        "Напруга старту балансування", "В", state.balanceStartVoltage, 2, 0.01, 5.00, true,
+                        stringResource(R.string.metric_balance_start_voltage), unitV, state.balanceStartVoltage, 2, 0.01, 5.00, true,
                     ) { onChargeBalanceVoltage(it) }
                     EditableSettingRow(
-                        "Поріг різниці напруг комірок", "В", settings?.cellVoltageDiffThreshold, 2, 0.0, 5.00, true,
+                        stringResource(R.string.label_cell_voltage_diff_threshold), unitV, settings?.cellVoltageDiffThreshold, 2, 0.0, 5.00, true,
                     ) { onCellVoltageDiffThreshold(it) }
                 }
             }
 
             item {
-                Section("Струм і температура") {
+                val unitC = stringResource(R.string.unit_c)
+                Section(stringResource(R.string.section_current_temperature)) {
                     EditableSettingRow(
-                        "Номінальний струм реле", "А", state.dischargeProtectionCurrent, 1, 0.0, 999.9, false,
+                        stringResource(R.string.metric_rated_relay_current), stringResource(R.string.unit_a), state.dischargeProtectionCurrent, 1, 0.0, 999.9, false,
                     ) { onDischargeProtectionCurrent(it) }
                     EditableSettingRow(
-                        "Захист від перегріву", "°C", state.highTemperatureProtectionThreshold, 1, 0.0, 150.0, false,
+                        stringResource(R.string.settings_overtemp_protection), unitC, state.highTemperatureProtectionThreshold, 1, 0.0, 150.0, false,
                     ) { onHighTemperatureProtection(it) }
                     EditableSettingRow(
-                        "Захист від низької температури", "°C", settings?.lowTemperatureThreshold?.toDouble(),
+                        stringResource(R.string.settings_low_temp_protection), unitC, settings?.lowTemperatureThreshold?.toDouble(),
                         0, 0.0, 100.0, true,
                     ) { onLowTemperatureThreshold(it.toInt()) }
                     EditableSettingRow(
-                        "Температура старту вентилятора", "°C", settings?.fanStartTemperatureC?.toDouble(),
+                        stringResource(R.string.label_fan_start_temp), unitC, settings?.fanStartTemperatureC?.toDouble(),
                         0, 0.0, 100.0, true,
                     ) { onFanStartTemperature(it.toInt()) }
                     EditableSettingRow(
-                        "Температура старту нагрівача", "°C", settings?.heaterStartTemperatureC?.toDouble(),
+                        stringResource(R.string.label_heater_start_temp), unitC, settings?.heaterStartTemperatureC?.toDouble(),
                         0, 0.0, 100.0, true,
                     ) { onHeaterStartTemperature(it.toInt()) }
                 }
             }
 
             item {
-                Section("Ємність і комірки") {
+                val onLabel = stringResource(R.string.bool_on_short)
+                val offLabel = stringResource(R.string.bool_off_short)
+                Section(stringResource(R.string.section_capacity_cells)) {
                     EditableSettingRow(
-                        "Максимальна ємність", "Аг", state.maxBatteryCapacityAh, 1, 0.0, 6500.0, false,
+                        stringResource(R.string.metric_max_capacity), stringResource(R.string.unit_ah), state.maxBatteryCapacityAh, 1, 0.0, 6500.0, false,
                     ) { onMaxBatteryCapacityAh(it) }
                     EditableSettingRow(
-                        "Кількість комірок", "шт", state.cellCount?.toDouble(), 0, 0.0, 192.0, true,
+                        stringResource(R.string.metric_cell_count), stringResource(R.string.unit_pcs), state.cellCount?.toDouble(), 0, 0.0, 192.0, true,
                     ) { onTotalCellCount(it.toInt()) }
                     EditableSettingRow(
-                        "Використана ємність", "Аг", state.usedCapacityAh, 0, 0.0, 6500.0, true,
+                        stringResource(R.string.metric_used_capacity), stringResource(R.string.unit_ah), state.usedCapacityAh, 0, 0.0, 6500.0, true,
                     ) { onUsedCapacityAh(it.toInt()) }
                     BooleanSettingRow(
-                        "Автоскидання ємності", settings?.autoResetCapacity, "увімк.", "вимк.",
+                        stringResource(R.string.label_auto_reset_capacity), settings?.autoResetCapacity, onLabel, offLabel,
                         onOn = { onAutoResetCapacity(true) },
                         onOff = { onAutoResetCapacity(false) },
                     )
@@ -158,22 +162,23 @@ fun SettingsScreen(
             }
 
             item {
-                Section("Затримки") {
+                Section(stringResource(R.string.section_delays)) {
                     EditableSettingRow(
-                        "Затримка відключення хоста", "с", state.hostShutdownDelaySeconds?.toDouble(),
+                        stringResource(R.string.label_host_shutdown_delay), stringResource(R.string.unit_s), state.hostShutdownDelaySeconds?.toDouble(),
                         0, 1.0, 60000.0, true,
                     ) { onHostPowerOffDelaySec(it.toInt()) }
                     EditableSettingRow(
-                        "Затримка передзаряду", "с", settings?.preChargeDelaySec?.toDouble(),
+                        stringResource(R.string.label_precharge_delay), stringResource(R.string.unit_s), settings?.preChargeDelaySec?.toDouble(),
                         0, 0.0, 6500.0, true,
                     ) { onPreChargeDelaySec(it.toInt()) }
                 }
             }
 
             item {
-                Section("Канал за замовчуванням") {
+                Section(stringResource(R.string.section_default_channel)) {
                     BooleanSettingRow(
-                        "Канал за замовчуванням", state.defaultChannelOn, "увімк.", "вимк.",
+                        stringResource(R.string.section_default_channel), state.defaultChannelOn,
+                        stringResource(R.string.bool_on_short), stringResource(R.string.bool_off_short),
                         onOn = { onDefaultChannelState(true) },
                         onOff = { onDefaultChannelState(false) },
                     )
@@ -181,31 +186,31 @@ fun SettingsScreen(
             }
 
             item {
-                Section("Інженерні (захищені паролем у штатному застосунку)") {
+                Section(stringResource(R.string.section_engineering)) {
                     EditableSettingRow(
-                        "🔧 Тип датчика струму", "", settings?.currentSensorType?.toDouble(), 0, 1.0, 3.0, true,
+                        stringResource(R.string.label_current_sensor_type_engineering), "", settings?.currentSensorType?.toDouble(), 0, 1.0, 3.0, true,
                     ) { onCurrentSensorType(it.toInt()) }
                     EditableSettingRow(
-                        "🔧 CAN send ID", "", settings?.canSendId?.toDouble(), 0, 1.0, 32000.0, true,
+                        stringResource(R.string.label_can_send_id), "", settings?.canSendId?.toDouble(), 0, 1.0, 32000.0, true,
                     ) { onCanSendId(it.toInt()) }
                     EditableSettingRow(
-                        "🔧 CAN receive ID", "", settings?.canReceiveId?.toDouble(), 0, 1.0, 32000.0, true,
+                        stringResource(R.string.label_can_receive_id), "", settings?.canReceiveId?.toDouble(), 0, 1.0, 32000.0, true,
                     ) { onCanReceiveId(it.toInt()) }
                 }
             }
 
             item {
-                Section("Скидання") {
+                Section(stringResource(R.string.section_reset)) {
                     Text(
-                        "Точна ціль кожної кнопки не підтверджена остаточно — можливо, дублюють одна одну.",
+                        stringResource(R.string.reset_disclaimer),
                         style = MaterialTheme.typography.bodySmall,
                         color = ColorWarning,
                         modifier = Modifier.padding(bottom = 8.dp),
                     )
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = onClearAction9) { Text("Скинути (0x09)") }
-                        OutlinedButton(onClick = onResetDischargeCapacity) { Text("Скинути розряджену ємність (0x12)") }
-                        OutlinedButton(onClick = onClearCycleCounter) { Text("Скинути цикли — CLR (0x13)") }
+                        OutlinedButton(onClick = onClearAction9) { Text(stringResource(R.string.reset_action9_button)) }
+                        OutlinedButton(onClick = onResetDischargeCapacity) { Text(stringResource(R.string.reset_discharge_capacity_button)) }
+                        OutlinedButton(onClick = onClearCycleCounter) { Text(stringResource(R.string.reset_cycle_counter_button)) }
                     }
                 }
             }
@@ -232,7 +237,7 @@ private fun BooleanSettingRow(
         ) {
             Text(label, style = MaterialTheme.typography.bodyMedium)
             Text(
-                when (currentValue) { true -> onLabel; false -> offLabel; null -> "—" },
+                when (currentValue) { true -> onLabel; false -> offLabel; null -> stringResource(R.string.value_missing) },
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
@@ -265,7 +270,7 @@ private fun EditableSettingRow(
     ) {
         Text(label, style = MaterialTheme.typography.bodyMedium)
         Text(
-            currentValue?.let { "%.${decimals}f %s".format(it, unit).trim() } ?: "— (тап, щоб задати)",
+            currentValue?.let { "%.${decimals}f %s".format(it, unit).trim() } ?: stringResource(R.string.value_missing_tap_to_set),
             style = MaterialTheme.typography.bodyMedium,
         )
     }
@@ -317,7 +322,7 @@ private fun SettingEditDialog(
             Column {
                 if (unconfirmed) {
                     Text(
-                        "Формула запису не підтверджена на пристрої — гіпотеза. Звірте показник після надсилання.",
+                        stringResource(R.string.dialog_unconfirmed_warning),
                         style = MaterialTheme.typography.bodySmall,
                         color = ColorWarning,
                         modifier = Modifier.padding(bottom = 8.dp),
@@ -326,7 +331,7 @@ private fun SettingEditDialog(
                 OutlinedTextField(
                     value = text,
                     onValueChange = { text = it },
-                    label = { Text(if (unit.isBlank()) "значення" else unit) },
+                    label = { Text(unit.ifBlank { stringResource(R.string.field_generic_value_label) }) },
                     isError = !valid && text.isNotEmpty(),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(
@@ -334,17 +339,17 @@ private fun SettingEditDialog(
                     ),
                 )
                 Text(
-                    "Межі: $min–$max ${unit.ifBlank { "" }}".trim(),
+                    stringResource(R.string.dialog_limits, min.toString(), max.toString(), unit).trim(),
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(top = 4.dp),
                 )
             }
         },
         confirmButton = {
-            Button(onClick = { parsed?.let(onSubmit) }, enabled = valid) { Text("Надіслати") }
+            Button(onClick = { parsed?.let(onSubmit) }, enabled = valid) { Text(stringResource(R.string.dialog_submit_button)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Скасувати") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_cancel_button)) }
         },
     )
 }

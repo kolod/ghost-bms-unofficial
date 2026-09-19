@@ -1,4 +1,4 @@
-package ua.ztr.bmsmonitor.ui
+package io.github.kolod.ghostbms.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,10 +16,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlin.math.ceil
-import ua.ztr.bmsble.BmsState
+import io.github.kolod.ghostbms.R
+import io.github.kolod.ghostbms.ble.BmsState
 
 /** Скільки комірок реально отримують живу напругу в одному банку цього протоколу. */
 private const val PROTOCOL_VOLTAGE_CELL_LIMIT = 96
@@ -64,7 +66,7 @@ fun CellVoltagesScreen(
     ) {
         item(span = { GridItemSpan(maxLineSpan) }) {
             Text(
-                "Банк A",
+                stringResource(R.string.bank_a_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
@@ -76,7 +78,7 @@ fun CellVoltagesScreen(
 
         item(span = { GridItemSpan(maxLineSpan) }) {
             Text(
-                "Банк B",
+                stringResource(R.string.bank_b_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(top = 8.dp),
@@ -96,7 +98,7 @@ fun CellVoltagesScreen(
         if (moduleCount > 0) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Text(
-                    "Температура модулів",
+                    stringResource(R.string.temp_modules_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(top = 8.dp),
@@ -115,7 +117,7 @@ fun CellVoltagesScreen(
             if (moduleCount > CONFIRMED_TEMP_MODULE_SOURCE_LIMIT) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     Text(
-                        "Модулі ${CONFIRMED_TEMP_MODULE_SOURCE_LIMIT + 1}-$moduleCount: джерело даних у протоколі ще не підтверджено (TODO)",
+                        stringResource(R.string.temp_modules_unconfirmed, CONFIRMED_TEMP_MODULE_SOURCE_LIMIT + 1, moduleCount),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -136,9 +138,9 @@ private fun CellVoltageTile(cellNumber: Int, voltage: Double?) {
             modifier = Modifier.padding(8.dp).fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text("№$cellNumber", style = MaterialTheme.typography.labelSmall)
+            Text(stringResource(R.string.label_cell_number, cellNumber), style = MaterialTheme.typography.labelSmall)
             Text(
-                if (missing) "—" else "%.3f В".format(voltage),
+                if (missing) stringResource(R.string.value_missing) else "%.3f %s".format(voltage, stringResource(R.string.unit_v)),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = color,
@@ -154,9 +156,9 @@ private fun TemperatureTile(probeNumber: Int, celsius: Double?) {
             modifier = Modifier.padding(8.dp).fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text("Модуль $probeNumber", style = MaterialTheme.typography.labelSmall)
+            Text(stringResource(R.string.label_module_number, probeNumber), style = MaterialTheme.typography.labelSmall)
             Text(
-                if (celsius == null) "—" else "%.1f °C".format(celsius),
+                if (celsius == null) stringResource(R.string.value_missing) else "%.1f %s".format(celsius, stringResource(R.string.unit_c)),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
             )

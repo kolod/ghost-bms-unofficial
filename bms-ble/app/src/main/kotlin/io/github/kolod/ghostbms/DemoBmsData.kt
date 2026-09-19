@@ -1,38 +1,50 @@
-package ua.ztr.bmsmonitor
+package io.github.kolod.ghostbms
 
+import kotlin.math.ceil
 import kotlin.math.round
 import kotlin.math.sin
-import ua.ztr.bmsble.BmsSettings
-import ua.ztr.bmsble.BmsState
-import ua.ztr.bmsble.BmsStatusFlags
-import ua.ztr.bmsble.ProtectionCode
+import io.github.kolod.ghostbms.ble.BmsSettings
+import io.github.kolod.ghostbms.ble.BmsState
+import io.github.kolod.ghostbms.ble.BmsStatusFlags
+import io.github.kolod.ghostbms.ble.ProtectionCode
 
 /**
  * Генерує правдоподібний (плавно змінюваний) стан BMS без реального BLE-з'єднання —
- * лише для перевірки UI в debug-збірці ([BmsViewModel.connectDemo]). [tick] — лічильник
- * кроків демо-циклу, зростає щосекунди, керує плавною варіацією показників.
+ * для демо-режиму ([BmsViewModel.connectDemo]). [tick] — лічильник кроків демо-циклу,
+ * зростає щосекунди, керує плавною варіацією показників. [cellCount] — поточна
+ * (змінювана через Налаштування) загальна кількість комірок демо-пакету.
  */
 internal object DemoBmsData {
 
-    /** Загальна кількість комірок = 2 банки по [CELLS_PER_BANK] (див. BmsState.cellVoltages). */
-    private const val CELLS_PER_BANK = 8
-    private const val CELL_COUNT = 2 * CELLS_PER_BANK
+    const val DEFAULT_CELL_COUNT = 16
+    const val MIN_CELL_COUNT = 2
+    const val MAX_CELL_COUNT = 192
+
+    /** Максимум комірок в одному банку, як у реальному протоколі (CellVoltagesScreen). */
+    private const val MAX_CELLS_PER_BANK = 96
+
+    /** Один температурний модуль обслуговує максимум 12 комірок (CellVoltagesScreen). */
+    private const val CELLS_PER_TEMP_MODULE = 12
+    private const val MAX_TEMP_MODULES = 16
+
     private const val BASE_CELL_VOLTAGE = 3.30
 
-    fun state(tick: Int): BmsState {
+    fun state(tick: Int, cellCount: Int): BmsState {
         val phase = tick * 0.15
+        val perBankCellCount = (cellCount / 2).coerceIn(1, MAX_CELLS_PER_BANK)
+        val moduleCount = ceil(cellCount / CELLS_PER_TEMP_MODULE.toDouble()).toInt().coerceIn(1, MAX_TEMP_MODULES)
 
         // Банк A і банк B — різні фізичні комірки з тими самими номерами-мітками,
         // тож демо навмисно генерує для них трохи різні значення (не однакові).
-        val cellVoltages = (1..CELLS_PER_BANK).associateWith { i ->
+        val cellVoltages = (1..perBankCellCount).associateWith { i ->
             (BASE_CELL_VOLTAGE + 0.03 * sin(phase + i * 0.4) + (i % 4) * 0.004).round(3)
         }
-        val auxCellVoltages = (1..CELLS_PER_BANK).associateWith { i ->
+        val auxCellVoltages = (1..perBankCellCount).associateWith { i ->
             (BASE_CELL_VOLTAGE + 0.03 * sin(phase + i * 0.4 + 1.0) + (i % 3) * 0.003).round(3)
         }
         val simulatedLoadCurrent = 3.0 * sin(phase * 0.5)
         val simulatedVoltage = (cellVoltages.values.sum() + auxCellVoltages.values.sum()).round(2)
-        val moduleTemps = (1..8).associateWith { (24.0 + 2.0 * sin(phase * 0.3 + it)).round(1) }
+        val moduleTemps = (1..moduleCount).associateWith { (24.0 + 2.0 * sin(phase * 0.3 + it)).round(1) }
 
         return BmsState(
             // Сторінка 1, offset 13-18 — гіпотеза на живу телеметрію (перевіряється на дашборді).
@@ -43,7 +55,7 @@ internal object DemoBmsData {
             dischargeCutoffVoltagePerCell = 2.50,
             dischargeProtectionCurrent = 120.0,
             maxBatteryCapacityAh = 100.0,
-            cellCount = CELL_COUNT,
+            cellCount = cellCount,
             chargeCutoffVoltagePerCell = 3.65,
             highTemperatureProtectionThreshold = 60.0,
             usedCapacityAh = (12.0 + tick * 0.01).round(2),
