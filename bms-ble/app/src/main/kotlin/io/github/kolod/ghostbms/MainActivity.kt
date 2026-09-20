@@ -106,9 +106,13 @@ private fun AppRoot(viewModel: BmsViewModel) {
 
     var permissionsGranted by remember { mutableStateOf(hasBluetoothPermissions(context)) }
 
+    // Інкрементується при поверненні з системного діалогу "Увімкнути Bluetooth", щоб
+    // форсувати повторне читання adapter.isEnabled нижче — інакше після ввімкнення
+    // застосунок лишався б на екрані "Bluetooth вимкнено" до наступного recompose.
+    var bluetoothRefreshTrigger by remember { mutableStateOf(0) }
     val enableBluetoothLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
-    ) { /* результат ігноруємо — стан адаптера перевіряємо напряму нижче */ }
+    ) { bluetoothRefreshTrigger++ }
 
     val requestPermissionsLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
@@ -122,33 +126,26 @@ private fun AppRoot(viewModel: BmsViewModel) {
     val adapter = bluetoothManager.adapter
 
     if (!permissionsGranted) {
-        PermissionRequestScreen(onRequestClick = { requestPermissionsLauncher.launch(requiredBluetoothPermissions()) })
+        InfoScreen(
+            message = stringResource(R.string.bluetooth_permission_rationale),
+            actionLabel = stringResource(R.string.grant_permissions),
+            onAction = { requestPermissionsLauncher.launch(requiredBluetoothPermissions()) },
+        )
         return
     }
 
     if (adapter == null) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(24.dp),
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Text(stringResource(R.string.bluetooth_not_supported))
-        }
+        InfoScreen(message = stringResource(R.string.bluetooth_not_supported))
         return
     }
 
-    if (!adapter.isEnabled) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(24.dp),
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Text(stringResource(R.string.bluetooth_disabled))
-            Button(
-                onClick = { enableBluetoothLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)) },
-                modifier = Modifier.padding(top = 12.dp),
-            ) {
-                Text(stringResource(R.string.enable_bluetooth))
-            }
-        }
+    val adapterEnabled = remember(bluetoothRefreshTrigger) { adapter.isEnabled }
+    if (!adapterEnabled) {
+        InfoScreen(
+            message = stringResource(R.string.bluetooth_disabled),
+            actionLabel = stringResource(R.string.enable_bluetooth),
+            onAction = { enableBluetoothLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)) },
+        )
         return
     }
 
@@ -229,39 +226,39 @@ private fun AppRoot(viewModel: BmsViewModel) {
                     logLines = logLines,
                     onScreenOn = { viewModel.setScreenOn(true) },
                     onScreenOff = { viewModel.setScreenOn(false) },
-                    onBatteryEnabledChange = { viewModel.setBatteryEnabled(it) },
-                    onAutoBalance = { viewModel.setAutoBalance(it) },
+                    onBatteryEnabledChange = viewModel::setBatteryEnabled,
+                    onAutoBalance = viewModel::setAutoBalance,
                     onShareLog = logFile?.let { file -> { shareLogFile(context, file) } },
                     modifier = Modifier.padding(padding),
                 )
 
                 AppScreen.Settings -> SettingsScreen(
                     state = bmsState,
-                    onDischargeCutoffVoltage = { viewModel.setDischargeCutoffVoltage(it) },
-                    onDischargeProtectionCurrent = { viewModel.setDischargeProtectionCurrent(it) },
-                    onMaxBatteryCapacityAh = { viewModel.setMaxBatteryCapacityAh(it) },
-                    onTotalCellCount = { viewModel.setTotalCellCount(it) },
-                    onChargeCutoffVoltage = { viewModel.setChargeCutoffVoltage(it) },
-                    onHighTemperatureProtection = { viewModel.setHighTemperatureProtection(it) },
-                    onChargeRecoveryVoltage = { viewModel.setChargeRecoveryVoltage(it) },
-                    onDischargeRecoveryVoltage = { viewModel.setDischargeRecoveryVoltage(it) },
-                    onDefaultChannelState = { viewModel.setDefaultChannelState(it) },
-                    onLowVoltageHostShutdown = { viewModel.setLowVoltageHostShutdown(it) },
-                    onHostPowerOffDelaySec = { viewModel.setHostPowerOffDelaySec(it) },
-                    onChargeBalanceVoltage = { viewModel.setChargeBalanceVoltage(it) },
-                    onUsedCapacityAh = { viewModel.setUsedCapacityAh(it) },
-                    onAutoResetCapacity = { viewModel.setAutoResetCapacity(it) },
-                    onPreChargeDelaySec = { viewModel.setPreChargeDelaySec(it) },
-                    onCellVoltageDiffThreshold = { viewModel.setCellVoltageDiffThreshold(it) },
-                    onLowTemperatureThreshold = { viewModel.setLowTemperatureThreshold(it) },
-                    onCurrentSensorType = { viewModel.setCurrentSensorType(it) },
-                    onFanStartTemperature = { viewModel.setFanStartTemperature(it) },
-                    onHeaterStartTemperature = { viewModel.setHeaterStartTemperature(it) },
-                    onCanSendId = { viewModel.setCanSendId(it) },
-                    onCanReceiveId = { viewModel.setCanReceiveId(it) },
-                    onClearAction9 = { viewModel.clearAction9() },
-                    onResetDischargeCapacity = { viewModel.resetDischargeCapacity() },
-                    onClearCycleCounter = { viewModel.clearCycleCounter() },
+                    onDischargeCutoffVoltage = viewModel::setDischargeCutoffVoltage,
+                    onDischargeProtectionCurrent = viewModel::setDischargeProtectionCurrent,
+                    onMaxBatteryCapacityAh = viewModel::setMaxBatteryCapacityAh,
+                    onTotalCellCount = viewModel::setTotalCellCount,
+                    onChargeCutoffVoltage = viewModel::setChargeCutoffVoltage,
+                    onHighTemperatureProtection = viewModel::setHighTemperatureProtection,
+                    onChargeRecoveryVoltage = viewModel::setChargeRecoveryVoltage,
+                    onDischargeRecoveryVoltage = viewModel::setDischargeRecoveryVoltage,
+                    onDefaultChannelState = viewModel::setDefaultChannelState,
+                    onLowVoltageHostShutdown = viewModel::setLowVoltageHostShutdown,
+                    onHostPowerOffDelaySec = viewModel::setHostPowerOffDelaySec,
+                    onChargeBalanceVoltage = viewModel::setChargeBalanceVoltage,
+                    onUsedCapacityAh = viewModel::setUsedCapacityAh,
+                    onAutoResetCapacity = viewModel::setAutoResetCapacity,
+                    onPreChargeDelaySec = viewModel::setPreChargeDelaySec,
+                    onCellVoltageDiffThreshold = viewModel::setCellVoltageDiffThreshold,
+                    onLowTemperatureThreshold = viewModel::setLowTemperatureThreshold,
+                    onCurrentSensorType = viewModel::setCurrentSensorType,
+                    onFanStartTemperature = viewModel::setFanStartTemperature,
+                    onHeaterStartTemperature = viewModel::setHeaterStartTemperature,
+                    onCanSendId = viewModel::setCanSendId,
+                    onCanReceiveId = viewModel::setCanReceiveId,
+                    onClearAction9 = viewModel::clearAction9,
+                    onResetDischargeCapacity = viewModel::resetDischargeCapacity,
+                    onClearCycleCounter = viewModel::clearCycleCounter,
                     modifier = Modifier.padding(padding),
                 )
 
@@ -275,14 +272,16 @@ private fun AppRoot(viewModel: BmsViewModel) {
 }
 
 @Composable
-private fun PermissionRequestScreen(onRequestClick: () -> Unit) {
+private fun InfoScreen(message: String, actionLabel: String? = null, onAction: (() -> Unit)? = null) {
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(stringResource(R.string.bluetooth_permission_rationale))
-        Button(onClick = onRequestClick, modifier = Modifier.padding(top = 12.dp)) {
-            Text(stringResource(R.string.grant_permissions))
+        Text(message)
+        if (actionLabel != null && onAction != null) {
+            Button(onClick = onAction, modifier = Modifier.padding(top = 12.dp)) {
+                Text(actionLabel)
+            }
         }
     }
 }
