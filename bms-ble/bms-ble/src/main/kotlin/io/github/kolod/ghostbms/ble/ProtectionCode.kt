@@ -1,19 +1,23 @@
 package io.github.kolod.ghostbms.ble
 
-/** Коди захисту з page 0x10 (offset 7-8), значення підтверджені у штатному застосунку. */
-enum class ProtectionCode(val code: Int, val description: String) {
-    NONE(0, "Немає"),
-    OVER_CURRENT(1, "Перевищення струму"),
-    OVER_DISCHARGE(2, "Перерозряд"),
-    OVER_CHARGE(3, "Перезаряд"),
-    OVER_TEMPERATURE(4, "Перегрів"),
-    WRONG_CELL_COUNT(5, "Невірна кількість комірок"),
-    CHARGE_MOSFET_FAULT(6, "Несправність MOSFET заряду"),
-    DISCHARGE_MOSFET_FAULT(7, "Несправність MOSFET розряду"),
-    LOW_VOLTAGE_SHUTDOWN(8, "Просідання живлення хоста"),
-    CELL_VOLTAGE_DIFF(9, "Захист по різниці напруг комірок"),
-    LOW_TEMPERATURE(10, "Захист від низької температури"),
-    UNKNOWN(-1, "Невідомий код");
+/**
+ * Коди захисту з page 0x10 (offset 7-8), значення підтверджені у штатному застосунку.
+ * Бібліотека навмисно не несе текстових описів — локалізацію робить UI (див.
+ * `protectionLabel()` в app-модулі, що мапить кожен код на `stringResource`).
+ */
+enum class ProtectionCode(val code: Int) {
+    NONE(0),
+    OVER_CURRENT(1),
+    OVER_DISCHARGE(2),
+    OVER_CHARGE(3),
+    OVER_TEMPERATURE(4),
+    WRONG_CELL_COUNT(5),
+    CHARGE_MOSFET_FAULT(6),
+    DISCHARGE_MOSFET_FAULT(7),
+    LOW_VOLTAGE_SHUTDOWN(8),
+    CELL_VOLTAGE_DIFF(9),
+    LOW_TEMPERATURE(10),
+    UNKNOWN(-1);
 
     companion object {
         fun fromCode(code: Int): ProtectionCode = entries.find { it.code == code } ?: UNKNOWN
