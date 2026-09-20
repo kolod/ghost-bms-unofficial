@@ -1,0 +1,7 @@
+<resources>
+    <!-- windowBackground узгоджений з default background lightColorScheme() у ui/Theme.kt,
+         щоб не було спалаху іншого кольору між системним вікном і першим кадром Compose. -->
+    <style name="Theme.GhostBms" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowBackground">#FFFFFBFE</item>
+    </style>
+</resources>

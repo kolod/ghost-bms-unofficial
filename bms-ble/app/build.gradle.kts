@@ -73,6 +73,11 @@ configure<ApplicationExtension> {
 dependencies {
     "implementation"(project(":bms-ble"))
 
+    // Дає android:theme значення Theme.Material3.DayNight.* — саме та тема, під яку
+    // узгоджено ui/Theme.kt (light/darkColorScheme), тому вікно не блимає світлим фоном
+    // перед першим кадром Compose у темному режимі.
+    "implementation"("com.google.android.material:material:1.14.0")
+
     "implementation"(platform("androidx.compose:compose-bom:2026.09.00"))
     "implementation"("androidx.compose.ui:ui")
     "implementation"("androidx.compose.ui:ui-graphics")
