@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -23,6 +24,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BatteryFull
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerValue
@@ -51,6 +53,7 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import io.github.kolod.ghostbms.ble.BmsConnectionState
+import io.github.kolod.ghostbms.ui.AboutScreen
 import io.github.kolod.ghostbms.ui.BmsMonitorTheme
 import io.github.kolod.ghostbms.ui.CellVoltagesScreen
 import io.github.kolod.ghostbms.ui.ConnectionBanner
@@ -62,6 +65,13 @@ private enum class AppScreen(val titleRes: Int) {
     Dashboard(R.string.nav_dashboard),
     Settings(R.string.nav_settings),
     CellVoltages(R.string.nav_cell_voltages),
+    About(R.string.nav_about),
+}
+
+private const val LatestBuildUrl = "https://github.com/kolod/ghost-bms-unofficial/releases/latest"
+
+private fun openUrl(context: Context, url: String) {
+    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
 }
 
 private fun requiredBluetoothPermissions(): Array<String> =
@@ -223,6 +233,13 @@ private fun AppRoot(viewModel: BmsViewModel) {
                     onClick = { screen = AppScreen.CellVoltages; scope.launch { drawerState.close() } },
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                 )
+                NavigationDrawerItem(
+                    label = { Text(stringResource(AppScreen.About.titleRes)) },
+                    icon = { Icon(Icons.Default.Info, contentDescription = null) },
+                    selected = screen == AppScreen.About,
+                    onClick = { screen = AppScreen.About; scope.launch { drawerState.close() } },
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                )
             }
         },
     ) {
@@ -280,6 +297,13 @@ private fun AppRoot(viewModel: BmsViewModel) {
 
                 AppScreen.CellVoltages -> CellVoltagesScreen(
                     state = bmsState,
+                    modifier = Modifier.padding(padding),
+                )
+
+                AppScreen.About -> AboutScreen(
+                    appName = stringResource(R.string.app_name),
+                    versionName = BuildConfig.VERSION_NAME,
+                    onOpenLatestBuild = { openUrl(context, LatestBuildUrl) },
                     modifier = Modifier.padding(padding),
                 )
             }

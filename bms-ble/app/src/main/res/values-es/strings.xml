@@ -5,6 +5,7 @@
     <string name="nav_dashboard">Panel</string>
     <string name="nav_settings">Ajustes</string>
     <string name="nav_cell_voltages">Voltajes de las celdas</string>
+    <string name="nav_about">Acerca de</string>
     <string name="bluetooth_not_supported">Este dispositivo no admite Bluetooth.</string>
     <string name="bluetooth_disabled">El Bluetooth está desactivado.</string>
     <string name="enable_bluetooth">Activar Bluetooth</string>
@@ -177,4 +178,9 @@
     <string name="demo_mode_device_name">Modo demo</string>
     <string name="demo_mode_log_message">Modo demo: datos generados localmente, sin conexión BLE real.</string>
     <string name="unnamed_device">(sin nombre)</string>
+
+    <!-- AboutScreen -->
+    <string name="about_version">Versión %1$s</string>
+    <string name="about_latest_build">Última compilación en GitHub</string>
+    <string name="about_disclaimer">Esta es una aplicación no oficial creada mediante ingeniería inversa del protocolo BMS. Se proporciona \"tal cual\", sin garantía alguna — el autor no se hace responsable de los daños, pérdida de datos o daños al hardware derivados de su uso.</string>
 </resources>

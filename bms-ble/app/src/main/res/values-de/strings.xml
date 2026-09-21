@@ -5,6 +5,7 @@
     <string name="nav_dashboard">Dashboard</string>
     <string name="nav_settings">Einstellungen</string>
     <string name="nav_cell_voltages">Zellspannungen</string>
+    <string name="nav_about">Über die App</string>
     <string name="bluetooth_not_supported">Dieses Gerät unterstützt kein Bluetooth.</string>
     <string name="bluetooth_disabled">Bluetooth ist deaktiviert.</string>
     <string name="enable_bluetooth">Bluetooth aktivieren</string>
@@ -177,4 +178,9 @@
     <string name="demo_mode_device_name">Demomodus</string>
     <string name="demo_mode_log_message">Demomodus: Daten werden lokal generiert, keine echte BLE-Verbindung.</string>
     <string name="unnamed_device">(unbenannt)</string>
+
+    <!-- AboutScreen -->
+    <string name="about_version">Version %1$s</string>
+    <string name="about_latest_build">Neueste Version auf GitHub</string>
+    <string name="about_disclaimer">Dies ist eine inoffizielle App, die durch Reverse-Engineering des BMS-Protokolls erstellt wurde. Sie wird \"wie besehen\" ohne jegliche Gewährleistung bereitgestellt — der Autor haftet nicht für Schäden, Datenverlust oder Hardwareschäden, die durch die Nutzung entstehen.</string>
 </resources>

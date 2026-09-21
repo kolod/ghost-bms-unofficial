@@ -5,6 +5,7 @@
     <string name="nav_dashboard">Дашборд</string>
     <string name="nav_settings">Налаштування</string>
     <string name="nav_cell_voltages">Напруги комірок</string>
+    <string name="nav_about">Про застосунок</string>
     <string name="bluetooth_not_supported">Цей пристрій не підтримує Bluetooth.</string>
     <string name="bluetooth_disabled">Bluetooth вимкнено.</string>
     <string name="enable_bluetooth">Увімкнути Bluetooth</string>
@@ -177,4 +178,9 @@
     <string name="demo_mode_device_name">Демо-режим</string>
     <string name="demo_mode_log_message">Демо-режим: дані згенеровано локально, реального BLE-з\'єднання немає.</string>
     <string name="unnamed_device">(без імені)</string>
+
+    <!-- AboutScreen -->
+    <string name="about_version">Версія %1$s</string>
+    <string name="about_latest_build">Остання збірка на GitHub</string>
+    <string name="about_disclaimer">Це неофіційний застосунок, створений шляхом реверс-інжинірингу протоколу BMS. Він постачається \"як є\", без будь-яких гарантій — автор не несе відповідальності за можливі збитки, втрату даних чи пошкодження обладнання внаслідок його використання.</string>
 </resources>
