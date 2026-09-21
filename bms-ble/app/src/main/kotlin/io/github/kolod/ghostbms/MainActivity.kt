@@ -3,8 +3,10 @@ package io.github.kolod.ghostbms
 import android.Manifest
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -33,6 +35,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -106,13 +109,11 @@ private fun AppRoot(viewModel: BmsViewModel) {
 
     var permissionsGranted by remember { mutableStateOf(hasBluetoothPermissions(context)) }
 
-    // Інкрементується при поверненні з системного діалогу "Увімкнути Bluetooth", щоб
-    // форсувати повторне читання adapter.isEnabled нижче — інакше після ввімкнення
-    // застосунок лишався б на екрані "Bluetooth вимкнено" до наступного recompose.
-    var bluetoothRefreshTrigger by remember { mutableStateOf(0) }
     val enableBluetoothLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
-    ) { bluetoothRefreshTrigger++ }
+    ) { /* стан адаптера відстежується через ACTION_STATE_CHANGED нижче: одразу після
+          повернення з системного діалогу Bluetooth ще може бути в стані STATE_TURNING_ON,
+          тож adapter.isEnabled тут ще поверне false */ }
 
     val requestPermissionsLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
@@ -139,7 +140,22 @@ private fun AppRoot(viewModel: BmsViewModel) {
         return
     }
 
-    val adapterEnabled = remember(bluetoothRefreshTrigger) { adapter.isEnabled }
+    var adapterEnabled by remember { mutableStateOf(adapter.isEnabled) }
+    DisposableEffect(adapter) {
+        adapterEnabled = adapter.isEnabled
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(receiverContext: Context, intent: Intent) {
+                adapterEnabled = adapter.isEnabled
+            }
+        }
+        ContextCompat.registerReceiver(
+            context,
+            receiver,
+            IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED),
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
+        onDispose { context.unregisterReceiver(receiver) }
+    }
     if (!adapterEnabled) {
         InfoScreen(
             message = stringResource(R.string.bluetooth_disabled),
