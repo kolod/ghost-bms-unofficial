@@ -31,15 +31,18 @@ internal object DemoBmsData {
 
     fun state(tick: Int, cellCount: Int): BmsState {
         val phase = tick * 0.15
-        val perBankCellCount = (cellCount / 2).coerceIn(1, MAX_CELLS_PER_BANK)
         val moduleCount = ceil(cellCount / CELLS_PER_TEMP_MODULE.toDouble()).toInt().coerceIn(1, MAX_TEMP_MODULES)
 
-        // Банк A і банк B — різні фізичні комірки з тими самими номерами-мітками,
-        // тож демо навмисно генерує для них трохи різні значення (не однакові).
-        val cellVoltages = (1..perBankCellCount).associateWith { i ->
+        // На реальному пристрої весь сконфігурований пакет приходить через ОДИН банк
+        // (auxCellVoltages, підтверджено логами) — другий (cellVoltages) отримує дані лише
+        // для комірок понад MAX_CELLS_PER_BANK (CellVoltagesScreen). Демо повторює цю ж схему,
+        // а не ділить cellCount порівну між банками.
+        val auxCount = cellCount.coerceIn(1, MAX_CELLS_PER_BANK)
+        val primaryCount = (cellCount - MAX_CELLS_PER_BANK).coerceIn(0, MAX_CELLS_PER_BANK)
+        val cellVoltages = (1..primaryCount).associateWith { i ->
             (BASE_CELL_VOLTAGE + 0.03 * sin(phase + i * 0.4) + (i % 4) * 0.004).round(3)
         }
-        val auxCellVoltages = (1..perBankCellCount).associateWith { i ->
+        val auxCellVoltages = (1..auxCount).associateWith { i ->
             (BASE_CELL_VOLTAGE + 0.03 * sin(phase + i * 0.4 + 1.0) + (i % 3) * 0.003).round(3)
         }
         val simulatedLoadCurrent = 3.0 * sin(phase * 0.5)

@@ -46,24 +46,27 @@ private const val CONFIRMED_TEMP_MODULE_SOURCE_LIMIT = 8
  * Таблиця напруг усіх комірок (аналог вікна4/窗口4 штатного застосунку). Протокол передає
  * напруги двома пакетами (BmsFrame.CellVoltages / AuxCellVoltages, нумерація вікон C2 і C4
  * декомпільованого коду), але комірки в пакеті можуть бути підключені у довільному порядку —
- * тож не групуємо їх візуально за джерелом пакета, а просто зводимо в одну послідовність
- * 1..2×perBank (перший пакет — позиції 1..perBank, другий — perBank+1..2×perBank) і показуємо
+ * тож не групуємо їх візуально за джерелом пакета, а зводимо в одну послідовність і показуємо
  * тільки ті, що вже мають ненульове значення, зберігаючи цю послідовність.
+ *
+ * ВАЖЛИВО: банки НЕ діляться порівну (totalCellCount/2) — на реальному пристрої власника весь
+ * сконфігурований пакет (напр. 40 комірок) приходить ЦІЛКОМ через [BmsState.auxCellVoltages]
+ * (банк B/C2), а [BmsState.cellVoltages] (банк A/C4) стабільно нульовий — той самий патерн, що
+ * й для температурних модулів (див. [CONFIRMED_TEMP_MODULE_SOURCE_LIMIT]). Тож банк B нумерується
+ * як фізичні комірки 1..96, а банк A (якщо колись матиме дані — для пакетів понад 96 комірок) —
+ * як продовження 97..192, а не як "друга половина" сконфігурованої кількості.
  */
 @Composable
 fun CellVoltagesScreen(
     state: BmsState,
     modifier: Modifier = Modifier,
 ) {
-    val perBankCellCount = ((state.cellCount ?: (2 * PROTOCOL_VOLTAGE_CELL_LIMIT)) / 2)
-        .coerceIn(0, PROTOCOL_VOLTAGE_CELL_LIMIT)
-
     val populatedCells = buildList {
-        for (i in 1..perBankCellCount) {
-            state.cellVoltages[i]?.takeIf { it != 0.0 }?.let { add(i to it) }
+        for (i in 1..PROTOCOL_VOLTAGE_CELL_LIMIT) {
+            state.auxCellVoltages[i]?.takeIf { it != 0.0 }?.let { add(i to it) }
         }
-        for (i in 1..perBankCellCount) {
-            state.auxCellVoltages[i]?.takeIf { it != 0.0 }?.let { add((perBankCellCount + i) to it) }
+        for (i in 1..PROTOCOL_VOLTAGE_CELL_LIMIT) {
+            state.cellVoltages[i]?.takeIf { it != 0.0 }?.let { add((PROTOCOL_VOLTAGE_CELL_LIMIT + i) to it) }
         }
     }
 

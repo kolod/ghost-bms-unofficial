@@ -40,6 +40,13 @@ class BmsRawLogger(context: Context) {
     /** Останні (до [MAX_LINES]) рядки логу — для живого відображення в UI. */
     val lines: StateFlow<List<String>> = _lines.asStateFlow()
 
+    init {
+        // Версія застосунку на початку кожного лог-файлу — щоб при діагностиці
+        // одразу було зрозуміло, з якою збіркою зняли лог, без окремого запиту користувачу.
+        val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+        log("app version=${packageInfo.versionName}")
+    }
+
     @Synchronized
     fun log(message: String) {
         val line = "${timeFormat.format(Date())} $message"
