@@ -131,8 +131,6 @@
     <string name="protection_unknown">Невідомий код</string>
 
     <!-- CellVoltagesScreen -->
-    <string name="bank_a_title">Банк A</string>
-    <string name="bank_b_title">Банк B</string>
     <string name="temp_modules_title">Температура модулів</string>
     <string name="label_module_number">Модуль %1$d</string>
     <string name="temp_modules_unconfirmed">Модулі %1$d-%2$d: джерело даних у протоколі ще не підтверджено (TODO)</string>

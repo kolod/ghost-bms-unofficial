@@ -131,8 +131,6 @@
     <string name="protection_unknown">Codice sconosciuto</string>
 
     <!-- CellVoltagesScreen -->
-    <string name="bank_a_title">Banco A</string>
-    <string name="bank_b_title">Banco B</string>
     <string name="temp_modules_title">Temperatura dei moduli</string>
     <string name="label_module_number">Modulo %1$d</string>
     <string name="temp_modules_unconfirmed">Moduli %1$d-%2$d: origine dati nel protocollo non ancora confermata (TODO)</string>

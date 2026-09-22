@@ -43,11 +43,12 @@ private const val MAX_TEMP_MODULES = 16
 private const val CONFIRMED_TEMP_MODULE_SOURCE_LIMIT = 8
 
 /**
- * Таблиця напруг усіх комірок (аналог вікна4/窗口4 штатного застосунку). 192-комірковий
- * пакет складається з ДВОХ незалежних банків по 96 комірок кожен (BLE-протокол передає
- * банки під різними pageType-схемами — нумерація вікон C2 і C4 декомпільованого коду).
- * Номер комірки в банку A і той самий номер у банку B — це РІЗНІ фізичні комірки, тож
- * показуємо банки окремими сітками, кожна з власною нумерацією 1..96.
+ * Таблиця напруг усіх комірок (аналог вікна4/窗口4 штатного застосунку). Протокол передає
+ * напруги двома пакетами (BmsFrame.CellVoltages / AuxCellVoltages, нумерація вікон C2 і C4
+ * декомпільованого коду), але комірки в пакеті можуть бути підключені у довільному порядку —
+ * тож не групуємо їх візуально за джерелом пакета, а просто зводимо в одну послідовність
+ * 1..2×perBank (перший пакет — позиції 1..perBank, другий — perBank+1..2×perBank) і показуємо
+ * тільки ті, що вже мають ненульове значення, зберігаючи цю послідовність.
  */
 @Composable
 fun CellVoltagesScreen(
@@ -57,6 +58,15 @@ fun CellVoltagesScreen(
     val perBankCellCount = ((state.cellCount ?: (2 * PROTOCOL_VOLTAGE_CELL_LIMIT)) / 2)
         .coerceIn(0, PROTOCOL_VOLTAGE_CELL_LIMIT)
 
+    val populatedCells = buildList {
+        for (i in 1..perBankCellCount) {
+            state.cellVoltages[i]?.takeIf { it != 0.0 }?.let { add(i to it) }
+        }
+        for (i in 1..perBankCellCount) {
+            state.auxCellVoltages[i]?.takeIf { it != 0.0 }?.let { add((perBankCellCount + i) to it) }
+        }
+    }
+
     LazyVerticalGrid(
         columns = GridCells.Fixed(4),
         modifier = modifier.fillMaxSize().padding(horizontal = 12.dp),
@@ -64,29 +74,8 @@ fun CellVoltagesScreen(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         contentPadding = PaddingValues(vertical = 12.dp),
     ) {
-        item(span = { GridItemSpan(maxLineSpan) }) {
-            Text(
-                stringResource(R.string.bank_a_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
-        }
-        items(perBankCellCount) { index ->
-            val cellNumber = index + 1
-            CellVoltageTile(cellNumber = cellNumber, voltage = state.cellVoltages[cellNumber])
-        }
-
-        item(span = { GridItemSpan(maxLineSpan) }) {
-            Text(
-                stringResource(R.string.bank_b_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(top = 8.dp),
-            )
-        }
-        items(perBankCellCount) { index ->
-            val cellNumber = index + 1
-            CellVoltageTile(cellNumber = cellNumber, voltage = state.auxCellVoltages[cellNumber])
+        items(populatedCells, key = { it.first }) { (cellNumber, voltage) ->
+            CellVoltageTile(cellNumber = cellNumber, voltage = voltage)
         }
 
         // Кількість модулів = скільки їх фізично потрібно для сконфігурованої кількості
@@ -130,9 +119,7 @@ fun CellVoltagesScreen(
 }
 
 @Composable
-private fun CellVoltageTile(cellNumber: Int, voltage: Double?) {
-    val missing = voltage == null || voltage == 0.0
-    val color = if (missing) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
+private fun CellVoltageTile(cellNumber: Int, voltage: Double) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(8.dp).fillMaxWidth(),
@@ -140,10 +127,9 @@ private fun CellVoltageTile(cellNumber: Int, voltage: Double?) {
         ) {
             Text(stringResource(R.string.label_cell_number, cellNumber), style = MaterialTheme.typography.labelSmall)
             Text(
-                if (missing) stringResource(R.string.value_missing) else "%.3f %s".format(voltage, stringResource(R.string.unit_v)),
+                "%.3f %s".format(voltage, stringResource(R.string.unit_v)),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = color,
             )
         }
     }
